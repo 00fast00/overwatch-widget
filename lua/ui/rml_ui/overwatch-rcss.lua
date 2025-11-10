@@ -37,14 +37,6 @@ h1 {
     background-color: #FDC04C;
 }
 
-.width-10 {
-    width: 10%;
-}
-
-.width-70 {
-    width: 70%;
-}
-
 #overwatch-widget {
     /* positional properties */
     position: absolute;
@@ -107,14 +99,48 @@ h1 {
     height: 100%;
 }
 
-.logs thead tr td {
+.logs td {
+    padding: 4dp;
+    border-right-width: 1px;
+    border-right-color: #ffffff7F;
+}
+
+.logs thead td {
     font-family: "Exo 2";
     font-weight: 700;
+
+    border-bottom-width: 1px;
+    border-bottom-color: #ffffff7F;
+}
+
+.logs .log-buttons {
+    display: inline;
+    position: absolute;
+    right: 24dp;
+}
+
+.logs .form-button {
+    cursor: pointer;
+    text-align: center;
+    padding: 2dp;
+    color: #000000;
+    margin-left: 4dp;
+    border-radius: 2dp;
+    background-color: #ffffff7F;
+}
+
+.logs .form-button:hover {
+    background-color: #ffffffff;
 }
 
 .logsum {
     position: absolute;
     right: 16dp;
+}
+
+.settings-container {
+    width: 100%;
+    height: 100%;
 }
 
 /* Debug Controls Component */
@@ -227,29 +253,4 @@ sliderarrowdec:hover
 {
 	background-color: rgb(150,150,150);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ]]

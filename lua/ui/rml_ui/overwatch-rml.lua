@@ -24,8 +24,6 @@ return [[
         </div>
 
         <div class="log-container" data-if="panelMode == 'log'">
-            <div class="logsum">{{ logCount }} / {{ logMax }}</div>
-
             <div class="logs">
                 <table>
                     <thead>
@@ -35,11 +33,26 @@ return [[
                     </thead>
                     <tbody>
                         <tr data-for="log : logs">
-                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color">{{ log[it_index].value }}</td>
+                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color">{{ log[it_index].value }}
+                                <div data-if="it_index + 1 == numColumns" class="log-buttons">
+                                    <form onsubmit="widget:Say(event, true)">
+                                        <input type="text" name="player" data-value="log[1].value" style="display: none" />
+                                        <input type="text" name="message" data-value="log[6].value" style="display: none" />
+                                        <input type="submit" class="form-button">Global</input>
+                                    </form>
+                                    <form onsubmit="widget:Say(event, false)" data-if="it_index + 1 == numColumns">
+                                        <input type="text" name="player" data-value="log[1].value" style="display: none" />
+                                        <input type="text" name="message" data-value="log[6].value" style="display: none" />
+                                        <input type="submit" class="form-button">Team</input>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+
+            <div class="logsum">{{ logCount }} / {{ logMax }}</div>
         </div>
 
         <div class="settings-container" data-if="panelMode == 'settings'">

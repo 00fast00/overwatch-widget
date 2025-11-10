@@ -2454,16 +2454,18 @@ local DEFAULT_BG_COLOR = "#4a4a4a00"
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
-	autoSave = true,
+	autoSave = IS_RELEASE,
 	teamColoring = true,
 	prioColoring = true,
 
 	panel = {
 		height = "261px",
-		left = "1717px",
-		top = "1070px",
-		width = "540px",
+		left = "1651px",
+		top = "1122px",
+		width = "606px",
 	},
+
+	showButtons = true,
 
 	columns = {
 		time = { visible = true },
@@ -2551,7 +2553,9 @@ end
 ---@field headerName string
 ---@field panelMode string
 ---@field panel table
+---@field showButtons boolean
 ---@field columns any
+---@field numColumns integer
 ---@field logs table[]
 ---@field logCount integer
 ---@field logMax integer
@@ -2562,6 +2566,8 @@ local initModel = {
 	panelMode = "log",
 	panel = {},
 
+	showButtons = true,
+
 	columns = {
 		[1] = { label = "Time", width = "3.5rem", visible = true, teamColor = false },
 		[2] = { label = "Player Name", width = "14rem", visible = true, teamColor = true },
@@ -2571,6 +2577,7 @@ local initModel = {
 		[6] = { label = "Icon", width = "2rem", visible = false, teamColor = false },
 		[7] = { label = "Message", width = "100%", visible = true, teamColor = false },
 	},
+	numColumns = 7, -- Haven't found a way to calculate that in RML.
 
 	logs = {},
 	logCount = 0,
@@ -2717,6 +2724,7 @@ local ui = {
 
 		-- Copy users panel config into the data model.
 		initModel.panel = table.copy(uiConfig.panel)
+		initModel.showButtons = uiConfig.showButtons
 
 		initModel.columns[1].visible = uiConfig.columns.time.visible
 		initModel.columns[2].visible = uiConfig.columns.playerName.visible
@@ -2952,6 +2960,8 @@ end
 __B_MODULES['ui.rml_ui.controls'] = function(require)
 -- Controls available from RML.
 
+local spSendCommands = Spring.SendCommands
+
 local logger ---@type Logger
 -- local rmlContext ---@type RmlUi.Context
 local ui ---@type OverwatchUi
@@ -2961,11 +2971,10 @@ local controls = {}
 
 -- checkHandle is a safety helper to check we have required locals.
 --
----@param callee string
 ---@return boolean
-local function checkHandle(callee)
+local function checkHandle()
 	if not ui or not dmHandle then
-		logger:Warning("ui controls have no ui set, %s won't work", callee)
+		logger:Warning("ui controls have no ui set, they won't work")
 		return false
 	end
 
@@ -2987,7 +2996,7 @@ function controls.SetDmHandle(h)
 	dmHandle = h
 end
 
-function controls.Reload()
+function controls:Reload()
 	if not ui then
 		logger:Warning("ui controls have no ui set, reload won't work")
 		return
@@ -2997,8 +3006,8 @@ function controls.Reload()
 	ui.Init()
 end
 
-function controls.ToggleDebugger(_)
-	if not checkHandle("ToggleDebugger") then
+function controls:ToggleDebugger()
+	if not checkHandle() then
 		return
 	end
 
@@ -3012,12 +3021,33 @@ function controls.ToggleDebugger(_)
 end
 
 ---@param mode string
-function controls.SetPanelMode(_, mode)
-	if not checkHandle("SetPanelMode") then
+function controls:SetPanelMode(mode)
+	if not checkHandle() then
 		return
 	end
 
 	dmHandle.panelMode = mode
+end
+
+---@param event RmlUi.Event
+---@param global boolean
+function controls:Say(event, global)
+	if not checkHandle() then
+		return
+	end
+
+	local player = event.parameters["player"]
+	local message = event.parameters["message"]
+
+	if global then
+		spSendCommands(string.format("say %s: %s", player, message))
+	else
+		spSendCommands(string.format("say a: %s: %s", player, message))
+	end
+end
+
+function controls:AtEnd(it_index, list)
+	return it_index > #list
 end
 
 return controls
@@ -3062,14 +3092,6 @@ h1 {
 
 .bg-primary {
     background-color: #FDC04C;
-}
-
-.width-10 {
-    width: 10%;
-}
-
-.width-70 {
-    width: 70%;
 }
 
 #overwatch-widget {
@@ -3134,14 +3156,48 @@ h1 {
     height: 100%;
 }
 
-.logs thead tr td {
+.logs td {
+    padding: 4dp;
+    border-right-width: 1px;
+    border-right-color: #ffffff7F;
+}
+
+.logs thead td {
     font-family: "Exo 2";
     font-weight: 700;
+
+    border-bottom-width: 1px;
+    border-bottom-color: #ffffff7F;
+}
+
+.logs .log-buttons {
+    display: inline;
+    position: absolute;
+    right: 24dp;
+}
+
+.logs .form-button {
+    cursor: pointer;
+    text-align: center;
+    padding: 2dp;
+    color: #000000;
+    margin-left: 4dp;
+    border-radius: 2dp;
+    background-color: #ffffff7F;
+}
+
+.logs .form-button:hover {
+    background-color: #ffffffff;
 }
 
 .logsum {
     position: absolute;
     right: 16dp;
+}
+
+.settings-container {
+    width: 100%;
+    height: 100%;
 }
 
 /* Debug Controls Component */
@@ -3254,31 +3310,6 @@ sliderarrowdec:hover
 {
 	background-color: rgb(150,150,150);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ]]
 end
 
@@ -3310,8 +3341,6 @@ return [[
         </div>
 
         <div class="log-container" data-if="panelMode == 'log'">
-            <div class="logsum">{{ logCount }} / {{ logMax }}</div>
-
             <div class="logs">
                 <table>
                     <thead>
@@ -3321,11 +3350,26 @@ return [[
                     </thead>
                     <tbody>
                         <tr data-for="log : logs">
-                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color">{{ log[it_index].value }}</td>
+                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color">{{ log[it_index].value }}
+                                <div data-if="it_index + 1 == numColumns" class="log-buttons">
+                                    <form onsubmit="widget:Say(event, true)">
+                                        <input type="text" name="player" data-value="log[1].value" style="display: none" />
+                                        <input type="text" name="message" data-value="log[6].value" style="display: none" />
+                                        <input type="submit" class="form-button">Global</input>
+                                    </form>
+                                    <form onsubmit="widget:Say(event, false)" data-if="it_index + 1 == numColumns">
+                                        <input type="text" name="player" data-value="log[1].value" style="display: none" />
+                                        <input type="text" name="message" data-value="log[6].value" style="display: none" />
+                                        <input type="submit" class="form-button">Team</input>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+
+            <div class="logsum">{{ logCount }} / {{ logMax }}</div>
         </div>
 
         <div class="settings-container" data-if="panelMode == 'settings'">

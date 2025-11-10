@@ -20,16 +20,18 @@ local DEFAULT_BG_COLOR = "#4a4a4a00"
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
-	autoSave = true,
+	autoSave = IS_RELEASE,
 	teamColoring = true,
 	prioColoring = true,
 
 	panel = {
 		height = "261px",
-		left = "1717px",
-		top = "1070px",
-		width = "540px",
+		left = "1651px",
+		top = "1122px",
+		width = "606px",
 	},
+
+	showButtons = true,
 
 	columns = {
 		time = { visible = true },
@@ -117,7 +119,9 @@ end
 ---@field headerName string
 ---@field panelMode string
 ---@field panel table
+---@field showButtons boolean
 ---@field columns any
+---@field numColumns integer
 ---@field logs table[]
 ---@field logCount integer
 ---@field logMax integer
@@ -128,6 +132,8 @@ local initModel = {
 	panelMode = "log",
 	panel = {},
 
+	showButtons = true,
+
 	columns = {
 		[1] = { label = "Time", width = "3.5rem", visible = true, teamColor = false },
 		[2] = { label = "Player Name", width = "14rem", visible = true, teamColor = true },
@@ -137,6 +143,7 @@ local initModel = {
 		[6] = { label = "Icon", width = "2rem", visible = false, teamColor = false },
 		[7] = { label = "Message", width = "100%", visible = true, teamColor = false },
 	},
+	numColumns = 7, -- Haven't found a way to calculate that in RML.
 
 	logs = {},
 	logCount = 0,
@@ -283,6 +290,7 @@ local ui = {
 
 		-- Copy users panel config into the data model.
 		initModel.panel = table.copy(uiConfig.panel)
+		initModel.showButtons = uiConfig.showButtons
 
 		initModel.columns[1].visible = uiConfig.columns.time.visible
 		initModel.columns[2].visible = uiConfig.columns.playerName.visible

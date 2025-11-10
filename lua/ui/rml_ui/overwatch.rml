@@ -4,27 +4,27 @@
 
     <link rel="stylesheet" href="overwatch.rcss" type="text/rcss" />
 </head>
-<body id="overwatch-widget">
-    <div id="widget-container" data-model="overwatch_model">
+<body id="overwatch-widget" data-model="overwatch" data-style-top="panel.top" data-style-left="panel.left" data-style-width="panel.width" data-style-height="panel.height">
+    <div id="overwatch-panel" data-model="overwatch">
         <div class="debug-controls" data-if="isDev == true">
             <button class="debug-btn text-dark text-sm font-bold bg-primary" onclick="widget:Reload()" title="Reload Widget">reload</button>
             <button class="debug-btn text-dark text-sm font-bold bg-primary" onclick="widget:ToggleDebugger()" title="Toggle Debugger">debug</button>
         </div>
 
-        <div id="widget-header">
+        <div class="header">
             <h1>Overwatch</h1>
-            <button class="tab"
-                    data-if="panel == 'settings'"
-                    onclick="widget:SetPanel('log')">Log</button>
-            <button class="tab"
-                    data-if="panel == 'log'"
-                    onclick="widget:SetPanel('settings')">Settings</button>
+            <button class="button"
+                    data-if="panelMode == 'settings'"
+                    onclick="widget:SetPanelMode('log')">Log</button>
+            <button class="button"
+                    data-if="panelMode == 'log'"
+                    onclick="widget:SetPanelMode('settings')">Settings</button>
         </div>
 
-        <div id="log" data-if="panel == 'log'">
-            <div id="logsum">{{ logCount }} / {{ logMax }}</div>
+        <div class="log-container" data-if="panelMode == 'log'">
+            <div class="logsum">{{ logCount }} / {{ logMax }}</div>
 
-            <div id="logs">
+            <div class="logs">
                 <table>
                     <thead>
                         <tr>
@@ -33,14 +33,17 @@
                     </thead>
                     <tbody>
                         <tr data-for="log : logs">
-                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color" data-style-background-color="log[it_index].bgColor">{{ log[it_index].value }}</td>
+                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color">{{ log[it_index].value }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div id="settings" data-if="panel == 'settings'">
+        <div class="settings-container" data-if="panelMode == 'settings'">
+        </div>
+
+        <div class="footer">
         </div>
     </div>
 

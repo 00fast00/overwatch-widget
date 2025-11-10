@@ -59,15 +59,13 @@ function controls.ToggleDebugger(_)
 	end
 end
 
----@param panel string
-function controls.SetPanel(_, panel)
-	if not checkHandle("SetPanel") then
+---@param mode string
+function controls.SetPanelMode(_, mode)
+	if not checkHandle("SetPanelMode") then
 		return
 	end
 
-	logger:Debug("setting panel to %s", panel)
-
-	dmHandle.panel = panel
+	dmHandle.panelMode = mode
 end
 
 return controls

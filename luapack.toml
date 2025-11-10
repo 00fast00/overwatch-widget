@@ -7,5 +7,5 @@ paths = [
 ]
 # preludes = ["prelude/prelude_vendor.lua"]
 # vendor = ["vendor/lua/?.lua", "vendor/lua/?/init.lua"]
-output = "dist/gui_overwatch.lua"
+output = "dist/overwatch.lua"
 diagnostics = true

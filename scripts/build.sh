@@ -3,8 +3,8 @@
 # Build script configuration
 SRC_DIR="lua"
 OUTPUT_DIR="dist"
-DEBUG_OUTPUT="${OUTPUT_DIR}/debug/gui_overwatch.lua"
-RELEASE_OUTPUT="${OUTPUT_DIR}/gui_overwatch.lua"
+DEBUG_OUTPUT="${OUTPUT_DIR}/debug/overwatch.lua"
+RELEASE_OUTPUT="${OUTPUT_DIR}/overwatch.lua"
 
 function build_lua_rml() {
   echo "Creating -rml.lua and -rcss.lua files..."

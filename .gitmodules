@@ -1,6 +1,6 @@
 [submodule "vendor/recoil-lua-library"]
 	path = vendor/recoil-lua-library
 	url = https://github.com/beyond-all-reason/recoil-lua-library.git
-[submodule "vendor/i18n"]
+[submodule "vendor/lua/i18n"]
 	path = vendor/lua/i18n
 	url = https://github.com/kikito/i18n.lua.git

@@ -2,7 +2,7 @@
 
 > _WARNING_: This is in development, it does not much at the moment.
 
-A configurable/scriptable monitoring and notification engine for [Recoil Engine](https://recoilengine.org/).
+A configurable and scriptable notification engine for [Recoil Engine](https://recoilengine.org/).
 
 ## Features
 
@@ -13,7 +13,7 @@ A configurable/scriptable monitoring and notification engine for [Recoil Engine]
 
 ## Installation & Setup
 
-1. Copy [dist/gui_overwatch.lua](dist/gui_overwatch.lua) into your LuaUI/Widgets/ directory
+1. Copy [dist/overwatch.lua](dist/overwatch.lua) into your `LuaUI/Widgets/` directory
 2. In Skirmish mode / a widget enabled lobby / spectator mode you can enable the widget in `Settings` -> `Custom`.
 
 ## Usage
@@ -30,7 +30,8 @@ Configuration files are stored in `LuaUI/Config/`:
 
 ## Creating Custom Blueprints
 
-You can create custom blueprints by adding them to `LuaUI/Config/OverwatchBlueprints*.lua`. See the example files in [blueprints](blueprints/) or [lua/builtin_blueprints.lua](lua/builtin_blueprints.lua) for details.
+You can create custom blueprints by adding them to `LuaUI/Config/OverwatchBlueprints*.lua`.  
+See the example files in [blueprints](blueprints/) or [lua/builtin_blueprints/](lua/builtin_blueprints/) for details.
 
 We have an extra [doc/developer/readme.md](doc/developer/readme.md) for developers.
 

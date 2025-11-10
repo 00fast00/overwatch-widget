@@ -54,7 +54,7 @@ Think of it like building with LEGO - we create individual pieces separately, th
    - Starts luapack with `lua/main.lua`
    - Follows all `require()` statements to find dependencies
    - Combines everything into a single file with proper scoping
-   - Outputs the result to `dist/gui_overwatch.lua` and `dist/debug/gui_overwatch.lua`
+   - Outputs the result to `dist/overwatch.lua` and `dist/debug/overwatch.lua`
 
 4. The bundled file is what you copy to your game's widget directory
 
@@ -72,10 +72,10 @@ See [luapack](https://github.com/00fast00/luapack)
 
 1. Edit files in the `src/` directory
 2. Run `scripts/build.sh all` or `scripts/build.sh watch`
-3. The bundled widget appears in `dist/debug/gui_overwatch.lua`
+3. The bundled widget appears in `dist/debug/overwatch.lua`
 4. Copy or symlink this file to your game's widget directory for testing
 
-## Debugging / Testing Tips
+## Debugging / Testing Tipps
 
 - Reenable in `Settings->Custom` to load again.
 - Use a second instance of your editor to open `dist` so you aren't getting masses of diagnostic errors.
@@ -177,8 +177,19 @@ Process flow:
 
 ## Resources
 
+### Lua
+
 - Awesome list: https://github.com/LewisJEllis/awesome-lua
 - Style guide: http://lua-users.org/wiki/LuaStyleGuide
 - LuaDoc / lua-language-server: https://luals.github.io/wiki/
+
+### BAR
 - BAR unit list: https://github.com/beyond-all-reason/Beyond-All-Reason/blob/master/language/en/units.json
+
+### Recoil
 - Recoil API: https://beyond-all-reason.github.io/RecoilEngine/docs/lua-api/
+
+### RmlUi Development
+
+- https://mikke89.github.io/RmlUiDoc/
+- https://sol2.readthedocs.io/en/latest/

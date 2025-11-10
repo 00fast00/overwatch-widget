@@ -51,19 +51,12 @@ function cutils.DefaultNotificationParams(n, NCID, defaultParams)
 	utils.ApplyDefaults(n.config.parameters["channels"][NCID], defaultParams)
 end
 
-local function getInterpolateVars(n)
-	local vars = {
+function cutils.Interpolate(format, n)
+	return interpolate(format, {
 		ruleId = n.config.id,
 		priorityName = constants.NOTIFY_PRIORITY_NAMES[n.priority],
 		message = n.message or "",
-	}
-	cutils.ApplyDefaults(vars, n.templateParams)
-
-	return vars
-end
-
-function cutils.Interpolate(format, n)
-	return interpolate(format, getInterpolateVars(n))
+	})
 end
 
 return cutils

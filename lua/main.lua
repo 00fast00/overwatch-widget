@@ -514,7 +514,11 @@ function widget:GameFrame(n)
 		-- Process each rule instance
 		for _, ruleInstance in ipairs(rules) do
 			local rconf = ruleInstance.config
-			if rconf.enabled and (not rconf.once or teamID == myTeamID) then
+			if
+				ruleInstance.bp.Trigger
+				and rconf.enabled
+				and (not rconf.once or teamID == myTeamID)
+			then
 				triggerRule(ruleInstance, teamID)
 			end
 		end

@@ -49,7 +49,7 @@ h1 {
     /* positional properties */
     position: absolute;
     bottom: 200dp;
-    right: 300dp;
+    left: 300dp;
     width: 500dp;
     height: 500dp;
     background: #060606ba;
@@ -83,36 +83,36 @@ h1 {
     clip: always;
 }
 
-#widget-container {
+#overwatch-panel {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
 }
 
-#log {
+.log-container {
     width: 100%;
     height: 100%;
 }
 
-#log scrollbarvertical {
+.log-container scrollbarvertical {
     position: absolute;
     top: 0;
     right: -12dp;
 }
 
-#logs {
+.logs {
     overflow: hidden scroll;
     width: 100%;
     height: 100%;
 }
 
-#logs thead tr td {
+.logs thead tr td {
     font-family: "Exo 2";
     font-weight: 700;
 }
 
-#logsum {
+.logsum {
     position: absolute;
     right: 16dp;
 }
@@ -145,7 +145,7 @@ h1 {
 }
 
 /* Header Component */
-#widget-header {
+#overwatch-panel .header {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -160,21 +160,13 @@ h1 {
     margin-bottom: 1rem;
 }
 
-/* Tabs Component */
-#tab-list {
-    display: flex;
-    flex-direction: row;
-
-    background-color: #333;
-}
-
-.tab {
+.button {
     cursor: pointer;
     text-align: center;
     padding: 4dp 8dp;
 }
 
-.tab:hover {
+.button:hover {
     color: #ebebeb;
 }
 

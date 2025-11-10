@@ -13,14 +13,23 @@ local spGetTimer = Spring.GetTimer
 local spDiffTimers = Spring.DiffTimers
 
 -- Constants
+local IS_RELEASE = constants.IS_RELEASE
 local DEFAULT_TEXT_COLOR = "#ffffffff"
 local DEFAULT_BG_COLOR = "#4a4a4a00"
 
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
+	autoSave = true,
 	teamColoring = true,
 	prioColoring = true,
+
+	panel = {
+		height = "261px",
+		left = "1717px",
+		top = "1070px",
+		width = "540px",
+	},
 
 	columns = {
 		time = { visible = true },
@@ -31,11 +40,13 @@ local CONFIG_DEFAULTS = {
 		icon = { visible = false },
 		message = { visible = true },
 	},
+
+	marqueeDuration = 0.8,
 }
 
 local MARQUEE_NCID = "marquee"
 
-local MODEL_NAME = "overwatch_model"
+local MODEL_NAME = "overwatch"
 local RML_PATH = "LuaUI/Widgets/overwatch.rml"
 local RCSS_PATH = "LuaUI/Widgets/overwatch.rcss"
 
@@ -81,19 +92,41 @@ local function rgbaToHex(r, g, b, a)
 	)
 end
 
+local function saveConfig()
+	if not uiConfig.autoSave then
+		return
+	end
+
+	if IS_RELEASE then
+		config:Save(
+			constants.CONFIG_DIR .. constants.CONFIG_FILE,
+			"-- " .. constants.NAME .. " config, auto-generated: DO NOT EDIT --\n"
+		)
+	else
+		config:Save(
+			constants.CONFIG_DIR .. constants.CONFIG_FILE,
+			"-- " .. constants.NAME .. " debug config, auto-generated: DO NOT EDIT --\n",
+			true
+		)
+	end
+end
+
 ---@class (exact) OverwatchUiModel
 ---@field isDev boolean
 ---@field debugging boolean
----@field panel string
+---@field headerName string
+---@field panelMode string
+---@field panel table
 ---@field columns any
 ---@field logs table[]
 ---@field logCount integer
 ---@field logMax integer
 local initModel = {
-	isDev = not constants.IS_RELEASE,
+	isDev = not IS_RELEASE,
 	debugging = false,
 
-	panel = "log",
+	panelMode = "log",
+	panel = {},
 
 	columns = {
 		[1] = { label = "Time", width = "3.5rem", visible = true, teamColor = false },
@@ -107,7 +140,7 @@ local initModel = {
 
 	logs = {},
 	logCount = 0,
-	logMax = constants.IS_RELEASE and 5000 or 100000,
+	logMax = IS_RELEASE and 1000 or 10000,
 }
 local rmlContext ---@type RmlUi.Context?
 local dmHandle ---@type RmlUi.SolLuaDataModel<OverwatchUiModel>?
@@ -195,7 +228,7 @@ local function drawMarqueeMessage()
 			marqueeMessage.message,
 			viewSizeX / 2,
 			marqueeY,
-			params.font_size * widgetScale,
+			params.fontSize * widgetScale,
 			"co"
 		)
 		font2:End()
@@ -248,6 +281,9 @@ local ui = {
 		-- Apply defaults
 		utils.ApplyDefaults(uiConfig, CONFIG_DEFAULTS)
 
+		-- Copy users panel config into the data model.
+		initModel.panel = table.copy(uiConfig.panel)
+
 		initModel.columns[1].visible = uiConfig.columns.time.visible
 		initModel.columns[2].visible = uiConfig.columns.playerName.visible
 		initModel.columns[3].visible = uiConfig.columns.priority.visible
@@ -273,7 +309,7 @@ local ui = {
 		controls.SetDmHandle(dmHandle)
 
 		-- Write .rml and .rcss if needed
-		if constants.IS_RELEASE then
+		if IS_RELEASE then
 			if not checkFile(RML_CHUNK, RML_PATH) then
 				logger:Debug("Writing .rml: %s", RML_PATH)
 				overwriteFile(RML_CHUNK, RML_PATH)
@@ -288,6 +324,34 @@ local ui = {
 		---@diagnostic disable-next-line: redundant-parameter
 		document = rmlContext:LoadDocument(RML_PATH, controls)
 		document:ReloadStyleSheet()
+
+		local widget = document:GetElementById("overwatch-widget")
+		if not widget then
+			logger:Error("failed to get my widget from the document")
+			return false
+		end
+
+		local remember = { "left", "top", "width", "hight" }
+		widget:AddEventListener("blur", function()
+			if not uiConfig["panel"] then
+				uiConfig["panel"] = {}
+			end
+
+			local dirty = false
+			for k, v in pairs(widget.style) do
+				if table.contains(remember, k) then
+					if uiConfig["panel"][k] ~= v then
+						uiConfig["panel"][k] = v
+						dirty = true
+					end
+				end
+			end
+
+			if dirty then
+				saveConfig()
+			end
+		end, true)
+
 		if uiConfig.show then
 			document:Show()
 		end
@@ -351,7 +415,7 @@ local ui = {
 			[3] = {
 				value = constants.NOTIFY_PRIORITY_NAMES[n.priority],
 				color = DEFAULT_TEXT_COLOR,
-				bgColor = uiConfig.prio_coloring and prioBgColor or DEFAULT_BG_COLOR,
+				bgColor = uiConfig.prioColoring and prioBgColor or DEFAULT_BG_COLOR,
 			},
 			[4] = {
 				value = n.category or "",
@@ -377,36 +441,6 @@ local ui = {
 
 		dmHandle.logs = logs
 		dmHandle.logCount = #logs
-
-		-- if not document then
-		-- 	return
-		-- end
-
-		-- document:UpdateDocument()
-
-		-- ---@param element RmlUi.Element
-		-- ---@return fun()
-		-- local say_click = function(element)
-		-- 	return function()
-		-- 		local leader_name = element:GetAttribute("data-leader_name")
-		-- 		local message = element:GetAttribute("data-message")
-
-		-- 		Spring.Echo(
-		-- 			"say: " .. leader_name .. ": " .. message .. " (by " .. constants.NAME .. ")"
-		-- 		)
-		-- 		-- sp_send_commands("say: " .. playerName .. ": " .. message)
-		-- 	end
-		-- end
-
-		-- local buttons = document:GetElementsByClassName("saybutton")
-		-- Spring.Echo("Found: ", #buttons)
-		-- for _, v in pairs(buttons) do
-		-- 	Spring.Echo("Found button")
-		-- 	if v:GetAttribute("data-listener") ~= "true" then
-		-- 		v:AddEventListener("click", say_click(v), true)
-		-- 		v:SetAttribute("data-listener", "true")
-		-- 	end
-		-- end
 	end,
 
 	Marquee = function(n)
@@ -453,15 +487,7 @@ local ui = {
 			end
 
 			-- Save
-			if constants.IS_RELEASE then
-				config:Save(constants.CONFIG_DIR .. constants.CONFIG_FILE)
-			else
-				config:Save(
-					constants.CONFIG_DIR .. constants.CONFIG_FILE,
-					"-- DEBUG (no rules) CONFIG --\n",
-					true
-				)
-			end
+			saveConfig()
 		end
 
 		return false

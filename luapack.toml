@@ -1,0 +1,11 @@
+[bundle]
+lua = "5.1"
+paths = [
+    "lua/?.lua", 
+    "lua/?/init.lua",
+    "vendor/lua/i18n/?.lua"
+]
+# preludes = ["prelude/prelude_vendor.lua"]
+# vendor = ["vendor/lua/?.lua", "vendor/lua/?/init.lua"]
+output = "dist/gui_overwatch.lua"
+diagnostics = true

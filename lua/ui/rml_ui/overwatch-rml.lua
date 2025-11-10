@@ -1,0 +1,78 @@
+-- AUTO Generated: DO NOT EDIT
+return [[
+<rml>
+<head>
+    <title>Overwatch</title>
+
+    <link rel="stylesheet" href="overwatch.rcss" type="text/rcss" />
+</head>
+<body id="overwatch-widget">
+    <div id="widget-container" data-model="overwatch_model">
+        <div class="debug-controls" data-if="isDev == true">
+            <button class="debug-btn text-dark text-sm font-bold bg-primary" onclick="widget:Reload()" title="Reload Widget">reload</button>
+            <button class="debug-btn text-dark text-sm font-bold bg-primary" onclick="widget:ToggleDebugger()" title="Toggle Debugger">debug</button>
+        </div>
+
+        <div id="widget-header">
+            <h1>Overwatch</h1>
+            <button class="tab"
+                    data-if="panel == 'settings'"
+                    onclick="widget:SetPanel('log')">Log</button>
+            <button class="tab"
+                    data-if="panel == 'log'"
+                    onclick="widget:SetPanel('settings')">Settings</button>
+        </div>
+
+        <div id="log" data-if="panel == 'log'">
+            <div id="logsum">{{ logCount }} / {{ logMax }}</div>
+
+            <div id="logs">
+                <table>
+                    <thead>
+                        <tr>
+                            <td data-for="column : columns" data-if="column.visible" data-style-width="column.width">{{ column.label }}</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-for="log : logs">
+                            <td data-for="column : columns" data-if="column.visible" data-style-color="log[it_index].color" data-style-background-color="log[it_index].bgColor">{{ log[it_index].value }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="settings" data-if="panel == 'settings'">
+        </div>
+    </div>
+
+    <handle move_target="overwatch-widget" class="move_handle cursor-move">&nbsp;</handle>
+    <handle size_target="overwatch-widget" class="size_handle cursor-move">&nbsp;</handle>
+</body>
+</rml>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]

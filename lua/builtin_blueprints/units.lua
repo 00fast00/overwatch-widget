@@ -216,6 +216,7 @@ return {
 			template = "You %{state} a %{unitName}, current: +%{count}",
 			cooldown = 1,
 			parameters = {
+				startupDelay = 60,
 				commanders = false,
 				watchFor = {},
 			},
@@ -224,7 +225,7 @@ return {
 		Start = function(game, team, config, notify)
 			local unsubs = {}
 
-			local lostLastTriggered = game.startupSeconds
+			local lostLastTriggered = game.startupSeconds + config.parameters.startupDelay
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_watch_lost", "UnitDestroyed", function(data)
@@ -264,14 +265,14 @@ return {
 				end)
 			)
 
-			local addLastTriggered = game.startupSeconds
+			local newLastTriggered = game.startupSeconds + config.parameters.startupDelay
 			table.insert(
 				unsubs,
-				team:Subscribe("unit_watch_got", "UnitFinished", function(data)
+				team:Subscribe("unit_watch_new", "UnitFinished", function(data)
 					if
-						addLastTriggered > 0
+						newLastTriggered > 0
 						and config.cooldown > 0
-						and game.seconds - addLastTriggered < config.cooldown
+						and game.seconds - newLastTriggered < config.cooldown
 					then
 						return
 					end
@@ -300,7 +301,7 @@ return {
 						},
 					})
 
-					addLastTriggered = game.seconds
+					newLastTriggered = game.seconds
 				end)
 			)
 

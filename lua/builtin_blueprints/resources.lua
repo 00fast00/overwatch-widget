@@ -64,7 +64,7 @@ return {
 			category = "resource",
 			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
-			template = "You'r staling %{kind}, ratio: %<ratio>.f, treshold: %<threshold>.f",
+			template = "You'r staling %{kind}",
 			cooldown = 60 * 5, -- 5 minutes
 			parameters = {
 				kinds = { "metal", "energy" },

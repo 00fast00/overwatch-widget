@@ -23,13 +23,19 @@ return {
 			parameters = {
 				commanders = true,
 				watchFor = {
-					"corveng",
-					"armham",
-					"armdrag",
+					-- Tick and the like
+					"corfav",
 					"armfav",
 					"armflea",
+
+					-- T1 AIR
+					-- "corveng",
+					-- "legfig",
 				},
 			},
+		},
+		resource_stale = {
+			template = "You'r staling %{kind}, ratio: %<ratio>.f, treshold: %<threshold>.f",
 		},
 		unit_lost_ping = {
 			enabled = true,

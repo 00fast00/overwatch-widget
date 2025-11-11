@@ -1,3 +1,5 @@
+local utils = require("core.utils")
+
 -- Configuration helper and store.
 --
 ---@class Config
@@ -44,9 +46,13 @@ function Config:Load(path, defaultConfig)
 		return false
 	end
 
+	if defaultConfig then
+		utils.ApplyDefaults(result, defaultConfig)
+	end
+
 	self.data = result
 
-	self._logger:Debug("Loaded config successfully")
+	utils.self._logger:Debug("Loaded config successfully")
 	return true
 end
 
@@ -105,6 +111,10 @@ function Config:LoadMany(dir, pattern, last, defaultConfig)
 	if #lastPath > 0 then
 		self._logger:Trace("Loading last config %s", lastPath)
 		self.data = loadOne(lastPath, self.data)
+	end
+
+	if defaultConfig then
+		utils.ApplyDefaults(self.data, defaultConfig)
 	end
 
 	return true

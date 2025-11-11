@@ -46,10 +46,18 @@ local channel = {
 		-- Apply defaults
 		cutils.ApplyDefaults(myConfig, CONFIG_DEFAULTS)
 
+		-- Auto-disable in spec mode.
+		if gameContext.inSpecMode then
+			myConfig.enabled = false
+		end
+
 		return true
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -66,11 +74,6 @@ local channel = {
 	end,
 	GameFrame = function() end,
 	Notify = function(n)
-		-- Never send marequee in spec mode.
-		if gameContext.inSpecMode then
-			return true
-		end
-
 		if not cutils.ShouldSend(n, NCID, myConfig) then
 			if logger.level >= constants.LogLevel.TRACE3 then
 				logger:Trace3(

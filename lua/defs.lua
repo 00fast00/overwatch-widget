@@ -148,6 +148,7 @@
 ---@field id string
 ---@field Init fun(logger: Logger, game: GameContext, config: Config, ui: OverwatchUi): boolean
 ---@field Shutdown fun(): boolean
+---@field IsEnabled fun(): boolean
 ---@field GetControls fun(): ChannelControls
 ---@field GameFrame fun()
 ---@field Notify fun(n: Notification): boolean

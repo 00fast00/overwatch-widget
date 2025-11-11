@@ -51,6 +51,9 @@ local channel = {
 	Shutdown = function()
 		return true
 	end,
+	IsEnabled = function()
+		return myConfig.enabled
+	end,
 	GetControls = function()
 		---@type ChannelControls
 		return {

@@ -124,7 +124,7 @@ local function getTeamlist()
 end
 
 --- @param n Notification
-local function distribute(n)
+local function dispatch(n)
 	if not n.config then
 		logger:Warning("Bad rule not getting a config: %s", table.toString(n))
 		return
@@ -149,9 +149,11 @@ local function distribute(n)
 
 	-- Distribute
 	for _, c in ipairs(channels) do
-		-- Notify and stop distributing if channel wants it.
-		if not c.Notify(n) then
-			return
+		if c.IsEnabled() then
+			-- Notify and stop distributing if channel wants it.
+			if not c.Notify(n) then
+				return
+			end
 		end
 	end
 end
@@ -195,7 +197,7 @@ local function triggerRule(rule, teamId)
 	end
 
 	-- Generate alert
-	local triggered = rule.bp.Trigger(gameContext, teamContext, ruleConfig, state, distribute)
+	local triggered = rule.bp.Trigger(gameContext, teamContext, ruleConfig, state, dispatch)
 	if triggered then
 		-- Update state
 		state.lastTriggered = now
@@ -454,7 +456,7 @@ function widget:Initialize()
 						end
 
 						ruleStoppers[team.id][rule.config.id] =
-							rule.bp.Start(gameContext, team, rconf, distribute)
+							rule.bp.Start(gameContext, team, rconf, dispatch)
 					end
 				end
 			end

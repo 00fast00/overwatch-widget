@@ -8,7 +8,7 @@ local NCID = "console"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
-	format = "%{ruleId}(%{priorityName}): %{message}",
+	format = "[%{ruleId}] %{message}",
 	minPriority = constants.NOTIFY_PRIORITY.INFO,
 	maxPriority = -1,
 }

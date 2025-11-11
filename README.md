@@ -16,6 +16,15 @@ A scriptable notification engine for the [Recoil Engine](https://recoilengine.or
 The widget has been tested a lot, still needs more testing before beeing published on Discord Widgets.
 For development news see the Github issues.
 
+## TL;DR
+
+Overwatch combines [Blueprints](https://github.com/00fast00/overwatch-widget/tree/main/doc/developer#blueprint) (lua logic) with `Configs` and routes the results to [Channels](https://github.com/00fast00/overwatch-widget/tree/main/doc/developer#channel).
+
+Examples:
+
+- Blueprints: https://github.com/00fast00/overwatch-widget/blob/main/lua/builtin_blueprints/units.lua
+- Config: https://github.com/00fast00/overwatch-widget/blob/main/configs/OverwatchConfig.20builtin.lua
+
 ## Installation & Setup
 
 1. Copy [dist/overwatch.lua](dist/overwatch.lua) into your `LuaUI/Widgets/` directory
@@ -49,7 +58,7 @@ We have an extra [doc/developer/readme.md](doc/developer/readme.md) for develope
 ### Others
 
 - [BAR contributers](https://github.com/beyond-all-reason/Beyond-All-Reason/graphs/contributors) : We reuse various parts here or look at that code for inspiration.
-- [@goldjee](https://github.com/goldjee) : Initial inspiration for using RmmlUi and parts from https://github.com/goldjee/BAR-Widgets/tree/main/raptor-panel
+- [@goldjee](https://github.com/goldjee) : Initial inspiration for using RmlUI and parts from https://github.com/goldjee/BAR-Widgets/tree/main/raptor-panel
 
 ## License
 

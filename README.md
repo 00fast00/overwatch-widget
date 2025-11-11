@@ -6,8 +6,14 @@ A scriptable notification engine for the [Recoil Engine](https://recoilengine.or
 
 ## Features
 
+- Run's as spec or any custom widget enabled lobby
 - Rules for game events, resources, and unit builds
 - Does console, uilog (panel), sound, ping, command (/say a:) and marquee messages
+
+## State
+
+The widget has been tested a lot, still needs more testing before beeing published on Discord Widgets.
+For development news see the Github issues.
 
 ## Installation & Setup
 
@@ -33,7 +39,9 @@ See the example files in [blueprints](blueprints/) or [lua/builtin_blueprints/](
 
 We have an extra [doc/developer/readme.md](doc/developer/readme.md) for developers.
 
-## Authors
+## Credits
+
+### Authors
 
 - Fast
 

@@ -1,7 +1,5 @@
 # Developer Guide
 
-> _WARNING_: This is in development, it does not much at the moment.
-
 ## Project Structure
 
 - `library/`

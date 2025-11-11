@@ -1,36 +1,31 @@
 local cutils = require("channels.cutils")
-
-local spMarkerAddPoint = Spring.MarkerAddPoint
+local constants = require("core.constants")
 
 local CONFIG_CATEGORY = "channels"
-local NCID = "ping"
+local NCID = "uilog"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
-	format = "%{message}",
-	defaultParams = {
-		x = 0,
-		y = 0,
-		z = 0,
-	},
+	minPriority = constants.NOTIFY_PRIORITY.TRACE,
+	maxPriority = -1,
 }
 
 -- Vars
---local logger ---@type Logger
---local gameContext ---@type GameContext
+local logger ---@type Logger
+-- local gameContext ---@type GameContext
 local config ---@type Config
 local myConfig = {} ---@type table<string, any>
--- local ui ---@type OverwatchUi
+local ui ---@type OverwatchUi
 
 -- API
 ---@type Channel
 local channel = {
 	id = NCID,
-	Init = function(l, g, c, _)
-		--logger = l:WithSection(l.section .. "::channel_" .. NCID)
-		--gameContext = g
+	Init = function(l, _, c, u)
+		logger = l:WithSection(l.section .. "::channel_" .. NCID)
+		-- gameContext = g
 		config = c
-		-- ui = nui
+		ui = u
 
 		-- Our own section in the config
 		if not config.data[CONFIG_CATEGORY] then
@@ -64,16 +59,15 @@ local channel = {
 	end,
 	GameFrame = function() end,
 	Notify = function(n)
-		if not cutils.HasChannel(n, NCID) then
+		if not cutils.ShouldSend(n, NCID, myConfig) then
+			if logger.level >= constants.LogLevel.TRACE3 then
+				logger:Trace3("Not sending message: %s", n.config.id)
+			end
+
 			return true
 		end
 
-		if not n.parameters or not n.parameters.x or not n.parameters.y or not n.parameters.z then
-			return true
-		end
-
-		local m = cutils.Interpolate(myConfig.format, n)
-		spMarkerAddPoint(n.parameters.x, n.parameters.y, n.parameters.z, m, false)
+		ui.Log(n)
 
 		return true
 	end,

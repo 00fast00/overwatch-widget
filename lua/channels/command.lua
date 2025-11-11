@@ -79,8 +79,8 @@ local channel = {
 			return true
 		end
 
-		cutils.DefaultNotificationParams(n, NCID, myConfig.defaultParams)
-		local params = n.config.parameters["channels"][NCID]
+		local params = n.parameters or {}
+		cutils.ApplyDefaults(params, myConfig.defaultParams)
 
 		spSendCommands(params.command .. cutils.Interpolate(params.format, n))
 

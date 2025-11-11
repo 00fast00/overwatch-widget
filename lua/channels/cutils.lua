@@ -9,12 +9,12 @@ cutils.ApplyDefaults = utils.ApplyDefaults
 ---@param n Notification
 ---@param NCID string
 ---@return boolean
-function cutils.IsForcedChannel(n, NCID)
-	if not n.forceChannels then
+function cutils.HasChannel(n, NCID)
+	if not n.channels then
 		return false
 	end
 
-	if table.contains(n.forceChannels, NCID) then
+	if table.contains(n.channels, NCID) then
 		return true
 	end
 
@@ -31,12 +31,12 @@ function cutils.ShouldSend(n, NCID, myConfig)
 	end
 
 	-- Send if forced.
-	if cutils.IsForcedChannel(n, NCID) then
+	if cutils.HasChannel(n, NCID) then
 		return true
 	end
 
-	-- Do not send if forceChannels exists but we are not in.
-	if n.forceChannels then
+	-- Do not send if channels exists but we are not in.
+	if n.channels then
 		return false
 	end
 
@@ -49,24 +49,6 @@ function cutils.ShouldSend(n, NCID, myConfig)
 	end
 
 	return true
-end
-
--- Applys the given "defaultParams" to n.config.parameters["channels"][NCID]
---
----@param n Notification
----@param NCID string
----@param defaultParams table
-function cutils.DefaultNotificationParams(n, NCID, defaultParams)
-	if not n.config.parameters then
-		n.config.parameters = {}
-	end
-	if not n.config.parameters["channels"] then
-		n.config.parameters["channels"] = {}
-	end
-	if not n.config.parameters["channels"][NCID] then
-		n.config.parameters["channels"][NCID] = {}
-	end
-	utils.ApplyDefaults(n.config.parameters["channels"][NCID], defaultParams)
 end
 
 function cutils.Interpolate(format, n)

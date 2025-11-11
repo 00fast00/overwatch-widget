@@ -4,31 +4,21 @@ return {
 		resource_stale = {
 			enabled = true,
 			blueprint = "resource_stale",
-			forceChannels = {
-				[1] = "marquee",
-				[2] = "ui_log",
-			},
+			channels = { "marquee", "uilog" },
 		},
 		resource_stale_say = {
 			enabled = false,
 			blueprint = "resource_stale",
 			template = "I'm staling %{kind} (auto-message)",
-			forceChannels = {
-				[1] = "command",
-			},
+			channels = { "command" },
 			parameters = {
-				kind = {
-					[1] = "metal",
-				},
+				kind = { "metal" },
 			},
 		},
 		resource_waste = {
 			enabled = true,
 			blueprint = "resource_waste",
-			forceChannels = {
-				[1] = "marquee",
-				[2] = "ui_log",
-			},
+			channels = { "marquee", "uilog" },
 			parameters = {
 				channels = {
 					marquee = {
@@ -46,9 +36,7 @@ return {
 			enabled = false,
 			blueprint = "resource_waste",
 			template = "I'm excessing %{excess} of %{kind} (auto-message)",
-			forceChannels = {
-				[1] = "command",
-			},
+			channels = { "command" },
 		},
 		unit_limit = {
 			enabled = true,
@@ -68,6 +56,7 @@ return {
 		unit_lost_ping = {
 			enabled = true,
 			blueprint = "unit_lost_ping",
+			channels = { "ping", "sound" },
 			parameters = {
 				commanders = true,
 			},

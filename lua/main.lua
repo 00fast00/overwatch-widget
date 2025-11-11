@@ -17,9 +17,10 @@ local ui = require("ui.rml_ui")
 local channels = {
 	require("channels.command"),
 	require("channels.console"),
-	require("channels.ui_log"),
+	require("channels.uilog"),
 	require("channels.marquee"),
 	require("channels.ping"),
+	require("channels.sound"),
 }
 
 ---@type Blueprint[]
@@ -54,7 +55,7 @@ local CONFIG_RULE_OPTS = {
 	icon = "string",
 	template = "string",
 	parameters = "table",
-	forceChannels = "table",
+	channels = "table",
 }
 
 --Per rule defaults
@@ -140,7 +141,7 @@ local function distribute(n)
 
 	-- Apply config if not overriden.
 	n.seconds = n.seconds or gameContext.seconds
-	n.forceChannels = n.forceChannels or nconf.forceChannels
+	n.channels = n.channels or nconf.channels
 	n.priority = n.priority or nconf.priority
 	n.category = n.category or nconf.category
 	n.icon = n.icon or nconf.icon

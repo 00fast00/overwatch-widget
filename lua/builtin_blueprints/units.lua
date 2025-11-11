@@ -142,7 +142,6 @@ return {
 			icon = "ℹ️",
 			template = "Lost %{unitName} here",
 			cooldown = 0,
-			forceChannels = { "ping" },
 			parameters = {
 				commanders = false,
 				watchFor = {},

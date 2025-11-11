@@ -11,7 +11,7 @@
 ---@field priority NotifyPriority?
 ---@field icon string?
 ---@field template string?
----@field forceChannels string[]? Channels to force send the message (ignores priority on them).
+---@field channels string[]? Channels to force send the message (ignores priority on them).
 ---@field parameters table<string, any>? Custom parameters for the rule
 
 ---@class ConfigFormat
@@ -28,7 +28,7 @@
 ---@field icon string Icon to display with the notifications
 ---@field template string Message template for notifications
 --
----@field forceChannels string[]? Channels to force send the message (ignores priority on them).
+---@field channels string[]? Channels to force send the message (ignores priority on them).
 ---@field ownTeam boolean? Run only with the current team instead per team?
 ---@field interval integer? Seconds between condition checks
 ---@field id string? Unique identifier
@@ -43,7 +43,7 @@
 ---@field config RuleConfig Rules config
 --
 ---@field seconds number?
----@field forceChannels string[]? Channels to force send the message (ignores priority on them).
+---@field channels string[]? Channels to force send the message (ignores priority on them).
 ---@field templateParams table<string, any>? Message template params
 ---@field message string? Templated message. Overrides templating/interpolation if given.
 ---@field priority NotifyPriority? Notification priority level. Overrides config if given.

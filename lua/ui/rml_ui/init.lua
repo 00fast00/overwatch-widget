@@ -46,8 +46,6 @@ local CONFIG_DEFAULTS = {
 	logMax = IS_RELEASE and 100 or 500,
 }
 
-local MARQUEE_NCID = "marquee"
-
 local MODEL_NAME = "overwatch"
 local RML_PATH = "LuaUI/Widgets/overwatch.rml"
 local RCSS_PATH = "LuaUI/Widgets/overwatch.rcss"
@@ -210,10 +208,13 @@ local function drawMarqueeMessage()
 		return
 	end
 
+	local params = marqueeMessage.parameters
+	if not params then
+		return
+	end
+
 	local currentTimer = spGetTimer()
 	local elapsed = spDiffTimers(currentTimer, marqueeStartTime)
-
-	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
 
 	-- Check if message should be dismissed.
 	if elapsed > params.duration then

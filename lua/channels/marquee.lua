@@ -76,13 +76,14 @@ local channel = {
 				logger:Trace3(
 					"Not sending message: %s, %s",
 					n.config.id,
-					table.toString(n.forceChannels)
+					table.toString(n.channels)
 				)
 			end
 			return true
 		end
 
-		cutils.DefaultNotificationParams(n, NCID, myConfig.defaultParams)
+		n.parameters = n.parameters or {}
+		cutils.ApplyDefaults(n.parameters, myConfig.defaultParams)
 
 		ui.Marquee(n)
 

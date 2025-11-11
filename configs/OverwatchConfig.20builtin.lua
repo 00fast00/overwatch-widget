@@ -42,7 +42,7 @@ return {
 			},
 		},
 		resource_stale_say = {
-			enabled = true,
+			enabled = false,
 			blueprint = "resource_stale",
 			template = "I'm staling %{kind} (auto-message)",
 			forceChannels = {
@@ -75,7 +75,7 @@ return {
 			},
 		},
 		resource_waste_say = {
-			enabled = true,
+			enabled = false,
 			blueprint = "resource_waste",
 			template = "I'm excessing %{excess} of %{kind} (auto-message)",
 			forceChannels = {

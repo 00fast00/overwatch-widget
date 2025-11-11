@@ -10,10 +10,10 @@ Config.__index = Config
 ---@return Config
 function Config.New(logger)
 	---@type Config
-	local self = setmetatable({}, Config)
-
-	self.data = {}
-	self._logger = logger
+	local self = setmetatable(
+		{ data = {}, _logger = logger:WithSection(logger.section .. "::config") },
+		Config
+	)
 
 	return self
 end
@@ -26,6 +26,8 @@ end
 ---@param defaultConfig table? Default configuration if no config has been found
 ---@return boolean success Whether loading was successful
 function Config:Load(path, defaultConfig)
+	self._logger:Debug("Loading")
+
 	if not VFS.FileExists(path) then
 		if defaultConfig then
 			self._logger:Info("Config not found, will create on first save")
@@ -72,6 +74,8 @@ end
 function Config:LoadMany(dir, pattern, last, defaultConfig)
 	local cFiles = VFS.DirList(dir, pattern)
 
+	self._logger:Debug("Loading")
+
 	if #cFiles == 0 then
 		if defaultConfig then
 			self._logger:Info("Config not found, will create on first save")
@@ -91,6 +95,7 @@ function Config:LoadMany(dir, pattern, last, defaultConfig)
 	for _, p in ipairs(cFiles) do
 		local filename = p:match("([^/]+)$")
 		if filename ~= last then
+			self._logger:Trace("Loading config %s", p)
 			self.data = loadOne(p, self.data)
 		else
 			lastPath = p
@@ -98,6 +103,7 @@ function Config:LoadMany(dir, pattern, last, defaultConfig)
 	end
 
 	if #lastPath > 0 then
+		self._logger:Trace("Loading last config %s", lastPath)
 		self.data = loadOne(lastPath, self.data)
 	end
 

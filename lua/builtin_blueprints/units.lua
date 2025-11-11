@@ -5,107 +5,7 @@ local spGetUnitPosition = Spring.GetUnitPosition
 ---@type Blueprint[]
 return {
 	{
-		id = "commander_new",
-		description = "Watches for gaining commanders",
-		defaultConfig = {
-			category = "units",
-			priority = constants.NOTIFY_PRIORITY.INFO,
-			icon = "ℹ️",
-			template = "You got a commander: %{unitName}",
-			cooldown = 10,
-			parameters = {
-				startupDelay = 60,
-			},
-		},
-
-		Start = function(game, team, config, notify)
-			local unsubs = {}
-
-			local lastTriggered = game.startupSeconds + config.parameters.startupDelay
-			table.insert(
-				unsubs,
-				team:Subscribe("commander_new", "UnitFinished", function(data)
-					if
-						lastTriggered > 0
-						and config.cooldown > 0
-						and game.seconds - lastTriggered < config.cooldown
-					then
-						return
-					end
-
-					local defID = data.defID
-					local unitDef = UnitDefs[defID]
-
-					if not (unitDef.customParams and unitDef.customParams.iscommander) then
-						return
-					end
-
-					notify({
-						team = team,
-						config = config,
-						templateParams = {
-							unitName = unitDef.name,
-						},
-					})
-
-					lastTriggered = game.seconds
-				end)
-			)
-
-			return unsubs
-		end,
-	},
-	{
-		id = "commander_lost",
-		description = "Watches for loosing commanders",
-		defaultConfig = {
-			category = "units",
-			priority = constants.NOTIFY_PRIORITY.CRITICAL,
-			icon = "ℹ️",
-			template = "You lost a commander: %{unitName}",
-			cooldown = 10,
-			parameters = {},
-		},
-
-		Start = function(game, team, config, notify)
-			local unsubs = {}
-
-			local lastTriggered = game.startupSeconds
-			table.insert(
-				unsubs,
-				team:Subscribe("commander_lost", "UnitDestroyed", function(data)
-					if
-						lastTriggered > 0
-						and config.cooldown > 0
-						and game.seconds - lastTriggered < config.cooldown
-					then
-						return
-					end
-
-					local defID = data.defID
-					local unitDef = UnitDefs[defID]
-
-					if not (unitDef.customParams and unitDef.customParams.iscommander) then
-						return
-					end
-
-					notify({
-						team = team,
-						config = config,
-						templateParams = {
-							unitName = unitDef.name,
-						},
-					})
-
-					lastTriggered = game.seconds
-				end)
-			)
-
-			return unsubs
-		end,
-	},
-	{
-		id = "unit_got",
+		id = "unit_new",
 		description = "Watches for specific new units",
 		defaultConfig = {
 			category = "units",
@@ -115,6 +15,7 @@ return {
 			cooldown = 0,
 			parameters = {
 				startupDelay = 60,
+				commanders = false,
 				watchFor = {},
 			},
 		},
@@ -138,7 +39,13 @@ return {
 					local unitDef = UnitDefs[defID]
 					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -170,12 +77,17 @@ return {
 			template = "You lost a %{unitName}, current: +%{count}",
 			cooldown = 0,
 			parameters = {
+				commanders = false,
 				watchFor = {},
 			},
 		},
 
 		Start = function(game, team, config, notify)
 			local unsubs = {}
+
+			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
+				return
+			end
 
 			local lastTriggered = game.startupSeconds
 			table.insert(
@@ -190,9 +102,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -219,7 +138,7 @@ return {
 		description = "Pings lost units",
 		defaultConfig = {
 			category = "units",
-			priority = constants.NOTIFY_PRIORITY.INFO,
+			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
 			template = "Lost %{unitName} here",
 			cooldown = 0,
@@ -240,7 +159,7 @@ return {
 			local lastTriggered = game.startupSeconds
 			table.insert(
 				unsubs,
-				team:Subscribe("unit_lost", "UnitDestroyed", function(data)
+				team:Subscribe("unit_lost_ping", "UnitDestroyed", function(data)
 					if
 						lastTriggered > 0
 						and config.cooldown > 0
@@ -298,6 +217,7 @@ return {
 			template = "You %{state} a %{unitName}, current: +%{count}",
 			cooldown = 1,
 			parameters = {
+				commanders = false,
 				watchFor = {},
 			},
 		},
@@ -318,9 +238,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -351,9 +278,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 

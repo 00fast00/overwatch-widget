@@ -1,38 +1,6 @@
 ---@type ConfigFormat
 return {
 	rules = {
-		commander_lost = {
-			enabled = true,
-			blueprint = "commander_lost",
-			parameters = {
-				channels = {
-					marquee = {
-						fontColor = {
-							a = 1,
-							b = 0,
-							g = 0,
-							r = 1,
-						},
-					},
-				},
-			},
-		},
-		commander_new = {
-			enabled = true,
-			blueprint = "commander_new",
-			parameters = {
-				channels = {
-					marquee = {
-						fontColor = {
-							a = 1,
-							b = 0,
-							g = 0,
-							r = 1,
-						},
-					},
-				},
-			},
-		},
 		resource_stale = {
 			enabled = true,
 			blueprint = "resource_stale",
@@ -89,6 +57,13 @@ return {
 		resource_converter_level = {
 			enabled = true,
 			blueprint = "resource_converter_level",
+		},
+		unit_lost = {
+			enabled = true,
+			blueprint = "unit_lost",
+			parameters = {
+				commanders = true,
+			},
 		},
 		unit_lost_ping = {
 			enabled = true,

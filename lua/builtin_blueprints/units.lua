@@ -20,7 +20,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			local lastTriggered = game.startupSeconds + config.parameters.startupDelay
@@ -49,7 +49,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -82,7 +82,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
@@ -115,7 +115,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -148,7 +148,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
@@ -186,7 +186,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -222,7 +222,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			local lostLastTriggered = game.startupSeconds + config.parameters.startupDelay
@@ -251,7 +251,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -291,7 +291,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -319,7 +319,7 @@ return {
 			cooldown = 10,
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			local lastTriggered = game.startupSeconds
@@ -338,7 +338,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {

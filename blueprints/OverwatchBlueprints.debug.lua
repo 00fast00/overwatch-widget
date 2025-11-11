@@ -38,8 +38,8 @@ local list = {
 			interval = 60,
 		},
 
-		Trigger = function(game, team, config, state, notify)
-			notify({
+		Trigger = function(game, team, config, state, dispatch)
+			dispatch({
 				team = team,
 				config = config,
 				templateParams = {
@@ -63,8 +63,8 @@ local list = {
 			ownTeam = true,
 		},
 
-		Trigger = function(game, team, config, state, notify)
-			notify({
+		Trigger = function(game, team, config, state, dispatch)
+			dispatch({
 				team = team,
 				config = config,
 				templateParams = { game = tostring(game) },
@@ -84,8 +84,8 @@ local list = {
 			interval = 60,
 		},
 
-		Trigger = function(game, team, config, state, notify)
-			notify({
+		Trigger = function(game, team, config, state, dispatch)
+			dispatch({
 				team = team,
 				config = config,
 				templateParams = { team = tostring(team) },
@@ -105,8 +105,8 @@ local list = {
 			interval = 60,
 		},
 
-		Trigger = function(game, team, config, state, notify)
-			notify({
+		Trigger = function(game, team, config, state, dispatch)
+			dispatch({
 				team = team,
 				config = config,
 				templateParams = {
@@ -130,7 +130,7 @@ local list = {
 			ownTeam = true,
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			table.insert(
@@ -138,7 +138,7 @@ local list = {
 				game:Subscribe("debug_event_gamecontext_units", "UnitFinished", function(data)
 					local defID = data.defID
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -156,7 +156,7 @@ local list = {
 				game:Subscribe("debug_event_gamecontext_units", "UnitDestroyed", function(data)
 					local defID = data.defID
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -183,7 +183,7 @@ local list = {
 			cooldown = 10,
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			table.insert(
@@ -191,7 +191,7 @@ local list = {
 				team:Subscribe("debug_event_teamcontext_units", "UnitFinished", function(data)
 					local defID = data.defID
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -209,7 +209,7 @@ local list = {
 				team:Subscribe("debug_event_teamcontext_units", "UnitDestroyed", function(data)
 					local defID = data.defID
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -240,7 +240,7 @@ local list = {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			for _, kind in ipairs({ ResourceType.METAL, ResourceType.ENERGY }) do
@@ -262,7 +262,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -295,7 +295,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -328,7 +328,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -361,7 +361,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -394,7 +394,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -428,7 +428,7 @@ local list = {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -460,14 +460,14 @@ local list = {
 			interval = 10,
 		},
 
-		Trigger = function(game, team, config, state, notify)
+		Trigger = function(game, team, config, state, dispatch)
 			local mmLevel = team:GetRulesParamNum("mmLevel", 0)
 			local mmUse = team:GetRulesParamNum("mmUse", 0)
 			local mmCapacity = team:GetRulesParamNum("mmCapacity", 0)
 
 			if mmCapacity > 0 then
 				local efficiency = (mmUse / mmCapacity) * 100
-				notify({
+				dispatch({
 					team = team,
 					config = config,
 					templateParams = {

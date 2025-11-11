@@ -39,8 +39,8 @@ local list = {
 			interval = 10,
 		},
 
-		Trigger = function(game, team, config, state, notify)
-			notify({
+		Trigger = function(game, team, config, state, dispatch)
+			dispatch({
 				team = team,
 				config = config,
 				templateParams = {},

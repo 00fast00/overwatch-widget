@@ -4,6 +4,7 @@
 ---@field blueprint string Rules blueprint
 ---@field enabled boolean
 ---
+---@field tags string[]? Tags for grouping/filtering.
 ---@field interval integer? Periodic interval
 ---@field ownTeam boolean? Run only with the current team instead per team?
 ---@field cooldown integer?
@@ -28,6 +29,7 @@
 ---@field icon string Icon to display with the notifications
 ---@field template string Message template for notifications
 --
+---@field tags string[]? Tags for grouping/filtering.
 ---@field channels string[]? Channels to force send the message (ignores priority on them).
 ---@field ownTeam boolean? Run only with the current team instead per team?
 ---@field interval integer? Seconds between condition checks
@@ -51,9 +53,9 @@
 ---@field icon string? Icon to display with the notification. Overrides config if given.
 ---@field parameters table<string, any>? Custom parameters for the
 
----@alias NotifierFun fun(n: Notification)
----@alias BpStartFun fun(game: GameContext, team: TeamContext, config: RuleConfig, notify: NotifierFun): function[]?
----@alias BpTriggerFun fun(game: GameContext, team: TeamContext, config: RuleConfig, state: RuleState, notify: NotifierFun): boolean
+---@alias DispatchFun fun(n: Notification)
+---@alias BpStartFun fun(game: GameContext, team: TeamContext, config: RuleConfig, dispatch: DispatchFun): function[]?
+---@alias BpTriggerFun fun(game: GameContext, team: TeamContext, config: RuleConfig, state: RuleState, dispatch: DispatchFun): boolean
 
 -- The logic of a rule
 --

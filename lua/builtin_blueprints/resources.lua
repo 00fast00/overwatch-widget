@@ -17,7 +17,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			for _, kind in ipairs(config.parameters.kinds) do
@@ -39,7 +39,7 @@ return {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -72,7 +72,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			for _, kind in ipairs(config.parameters.kinds) do
@@ -94,7 +94,7 @@ return {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -127,12 +127,12 @@ return {
 			},
 		},
 
-		Trigger = function(game, team, config, state, notify)
+		Trigger = function(game, team, config, state, dispatch)
 			-- local mmLevel = team:GetRulesParamNum("mmLevel", 0)
 			local mmLevel = Spring.GetTeamRulesParam(team.id, "mmLevel")
 
 			if mmLevel >= config.parameters.threshold then
-				notify({
+				dispatch({
 					team = team,
 					config = config,
 					templateParams = {

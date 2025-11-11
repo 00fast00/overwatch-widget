@@ -56,6 +56,7 @@ local CONFIG_RULE_OPTS = {
 	template = "string",
 	parameters = "table",
 	channels = "table",
+	tags = "table",
 }
 
 --Per rule defaults

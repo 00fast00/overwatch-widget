@@ -160,7 +160,12 @@ _Code: [Example](src/Channel/Console.lua)_
               \                        /                  |
                v                      v                   |
             +--------------------------------+            |
-            |           run()                |            |
+            |           trigger()            |            |
+            +--------------------------------+            |
+                           |                              |
+                           v                              |
+            +--------------------------------+            |
+            |           dispatch()           |            |
             +--------------------------------+            |
                            |                              |
                            v                              |
@@ -172,7 +177,7 @@ _Code: [Example](src/Channel/Console.lua)_
 Process flow:
 1. A `Blueprint` (rule logic) is combined with a `RuleConfig` (settings)
 2. The rule evaluates using game and team context plus its state
-3. `run()` may generates a notification or returns nil
+3. `trigger()` may generates notification(s) and runs dispatch().
 4. The notification is distributed to configured channels
 5. Repeat at step 2.
 

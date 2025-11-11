@@ -54,7 +54,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			for _, kind in ipairs(config.parameters.kinds) do
@@ -76,7 +76,7 @@ return {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -101,7 +101,7 @@ return {
 			category = "resource",
 			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
-			template = "You'r staling %{kind}, ratio: %<ratio>.f, treshold: %<threshold>.f",
+			template = "You'r staling %{kind}",
 			cooldown = 60 * 5, -- 5 minutes
 			parameters = {
 				kinds = { "metal", "energy" },
@@ -109,7 +109,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			for _, kind in ipairs(config.parameters.kinds) do
@@ -131,7 +131,7 @@ return {
 								return
 							end
 
-							notify({
+							dispatch({
 								team = team,
 								config = config,
 								templateParams = {
@@ -164,12 +164,12 @@ return {
 			},
 		},
 
-		Trigger = function(game, team, config, state, notify)
+		Trigger = function(game, team, config, state, dispatch)
 			-- local mmLevel = team:GetRulesParamNum("mmLevel", 0)
 			local mmLevel = Spring.GetTeamRulesParam(team.id, "mmLevel")
 
 			if mmLevel >= config.parameters.threshold then
-				notify({
+				dispatch({
 					team = team,
 					config = config,
 					templateParams = {
@@ -211,7 +211,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			local lastTriggered = game.startupSeconds + config.parameters.startupDelay
@@ -240,7 +240,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -273,7 +273,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
@@ -306,7 +306,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -339,7 +339,7 @@ return {
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
@@ -377,7 +377,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -407,15 +407,16 @@ return {
 			template = "You %{state} a %{unitName}, current: +%{count}",
 			cooldown = 1,
 			parameters = {
+				startupDelay = 60,
 				commanders = false,
 				watchFor = {},
 			},
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
-			local lostLastTriggered = game.startupSeconds
+			local lostLastTriggered = game.startupSeconds + config.parameters.startupDelay
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_watch_lost", "UnitDestroyed", function(data)
@@ -441,7 +442,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -455,14 +456,14 @@ return {
 				end)
 			)
 
-			local addLastTriggered = game.startupSeconds
+			local newLastTriggered = game.startupSeconds + config.parameters.startupDelay
 			table.insert(
 				unsubs,
-				team:Subscribe("unit_watch_got", "UnitFinished", function(data)
+				team:Subscribe("unit_watch_new", "UnitFinished", function(data)
 					if
-						addLastTriggered > 0
+						newLastTriggered > 0
 						and config.cooldown > 0
-						and game.seconds - addLastTriggered < config.cooldown
+						and game.seconds - newLastTriggered < config.cooldown
 					then
 						return
 					end
@@ -481,7 +482,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -491,7 +492,7 @@ return {
 						},
 					})
 
-					addLastTriggered = game.seconds
+					newLastTriggered = game.seconds
 				end)
 			)
 
@@ -509,7 +510,7 @@ return {
 			cooldown = 10,
 		},
 
-		Start = function(game, team, config, notify)
+		Start = function(game, team, config, dispatch)
 			local unsubs = {}
 
 			local lastTriggered = game.startupSeconds
@@ -528,7 +529,7 @@ return {
 						return
 					end
 
-					notify({
+					dispatch({
 						team = team,
 						config = config,
 						templateParams = {
@@ -601,6 +602,9 @@ local channel = {
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -692,6 +696,9 @@ local channel = {
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -847,10 +854,18 @@ local channel = {
 		-- Apply defaults
 		cutils.ApplyDefaults(myConfig, CONFIG_DEFAULTS)
 
+		-- Auto-disable in spec mode.
+		if gameContext.inSpecMode then
+			myConfig.enabled = false
+		end
+
 		return true
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -867,11 +882,6 @@ local channel = {
 	end,
 	GameFrame = function() end,
 	Notify = function(n)
-		-- Never send marequee in spec mode.
-		if gameContext.inSpecMode then
-			return true
-		end
-
 		if not cutils.ShouldSend(n, NCID, myConfig) then
 			if logger.level >= constants.LogLevel.TRACE3 then
 				logger:Trace3(
@@ -947,6 +957,9 @@ local channel = {
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -1033,6 +1046,9 @@ local channel = {
 	Shutdown = function()
 		return true
 	end,
+	IsEnabled = function()
+		return myConfig.enabled
+	end,
 	GetControls = function()
 		---@type ChannelControls
 		return {
@@ -1111,6 +1127,9 @@ local channel = {
 	end,
 	Shutdown = function()
 		return true
+	end,
+	IsEnabled = function()
+		return myConfig.enabled
 	end,
 	GetControls = function()
 		---@type ChannelControls
@@ -3632,27 +3651,6 @@ return [[
     <handle size_target="overwatch-widget" class="size_handle cursor-move">&nbsp;</handle>
 </body>
 </rml>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ]]
 end
 
@@ -3716,6 +3714,7 @@ local CONFIG_RULE_OPTS = {
 	template = "string",
 	parameters = "table",
 	channels = "table",
+	tags = "table",
 }
 
 --Per rule defaults
@@ -3783,7 +3782,7 @@ local function getTeamlist()
 end
 
 --- @param n Notification
-local function distribute(n)
+local function dispatch(n)
 	if not n.config then
 		logger:Warning("Bad rule not getting a config: %s", table.toString(n))
 		return
@@ -3808,9 +3807,11 @@ local function distribute(n)
 
 	-- Distribute
 	for _, c in ipairs(channels) do
-		-- Notify and stop distributing if channel wants it.
-		if not c.Notify(n) then
-			return
+		if c.IsEnabled() then
+			-- Notify and stop distributing if channel wants it.
+			if not c.Notify(n) then
+				return
+			end
 		end
 	end
 end
@@ -3854,7 +3855,7 @@ local function triggerRule(rule, teamId)
 	end
 
 	-- Generate alert
-	local triggered = rule.bp.Trigger(gameContext, teamContext, ruleConfig, state, distribute)
+	local triggered = rule.bp.Trigger(gameContext, teamContext, ruleConfig, state, dispatch)
 	if triggered then
 		-- Update state
 		state.lastTriggered = now
@@ -4113,7 +4114,7 @@ function widget:Initialize()
 						end
 
 						ruleStoppers[team.id][rule.config.id] =
-							rule.bp.Start(gameContext, team, rconf, distribute)
+							rule.bp.Start(gameContext, team, rconf, dispatch)
 					end
 				end
 			end

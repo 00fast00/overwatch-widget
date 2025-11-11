@@ -69,25 +69,4 @@ return [[
     <handle size_target="overwatch-widget" class="size_handle cursor-move">&nbsp;</handle>
 </body>
 </rml>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ]]

@@ -9,6 +9,7 @@ A scriptable notification engine for the [Recoil Engine](https://recoilengine.or
 - Run's as spec or any custom widget enabled lobby
 - Rules for game events, resources, and unit builds
 - Does console, uilog (panel), sound, ping, command (/say a:) and marquee messages
+- Should work with any game/mod that runs with the `Recoil Engine` but that's untested.
 
 ## State
 
@@ -44,6 +45,11 @@ We have an extra [doc/developer/readme.md](doc/developer/readme.md) for develope
 ### Authors
 
 - Fast
+
+### Others
+
+- [BAR contributers](https://github.com/beyond-all-reason/Beyond-All-Reason/graphs/contributors) : We reuse various parts here or look at that code for inspiration.
+- [@goldjee](https://github.com/goldjee) : Initial inspiration for using RmmlUi and parts from https://github.com/goldjee/BAR-Widgets/tree/main/raptor-panel
 
 ## License
 

@@ -333,7 +333,6 @@ return {
 			icon = "ℹ️",
 			template = "Lost %{unitName} here",
 			cooldown = 0,
-			forceChannels = { "ping" },
 			parameters = {
 				commanders = false,
 				watchFor = {},
@@ -631,8 +630,8 @@ local channel = {
 			return true
 		end
 
-		cutils.DefaultNotificationParams(n, NCID, myConfig.defaultParams)
-		local params = n.config.parameters["channels"][NCID]
+		local params = n.parameters or {}
+		cutils.ApplyDefaults(params, myConfig.defaultParams)
 
 		spSendCommands(params.command .. cutils.Interpolate(params.format, n))
 
@@ -739,12 +738,12 @@ cutils.ApplyDefaults = utils.ApplyDefaults
 ---@param n Notification
 ---@param NCID string
 ---@return boolean
-function cutils.IsForcedChannel(n, NCID)
-	if not n.forceChannels then
+function cutils.HasChannel(n, NCID)
+	if not n.channels then
 		return false
 	end
 
-	if table.contains(n.forceChannels, NCID) then
+	if table.contains(n.channels, NCID) then
 		return true
 	end
 
@@ -761,12 +760,12 @@ function cutils.ShouldSend(n, NCID, myConfig)
 	end
 
 	-- Send if forced.
-	if cutils.IsForcedChannel(n, NCID) then
+	if cutils.HasChannel(n, NCID) then
 		return true
 	end
 
-	-- Do not send if forceChannels exists but we are not in.
-	if n.forceChannels then
+	-- Do not send if channels exists but we are not in.
+	if n.channels then
 		return false
 	end
 
@@ -779,24 +778,6 @@ function cutils.ShouldSend(n, NCID, myConfig)
 	end
 
 	return true
-end
-
--- Applys the given "defaultParams" to n.config.parameters["channels"][NCID]
---
----@param n Notification
----@param NCID string
----@param defaultParams table
-function cutils.DefaultNotificationParams(n, NCID, defaultParams)
-	if not n.config.parameters then
-		n.config.parameters = {}
-	end
-	if not n.config.parameters["channels"] then
-		n.config.parameters["channels"] = {}
-	end
-	if not n.config.parameters["channels"][NCID] then
-		n.config.parameters["channels"][NCID] = {}
-	end
-	utils.ApplyDefaults(n.config.parameters["channels"][NCID], defaultParams)
 end
 
 function cutils.Interpolate(format, n)
@@ -896,13 +877,14 @@ local channel = {
 				logger:Trace3(
 					"Not sending message: %s, %s",
 					n.config.id,
-					table.toString(n.forceChannels)
+					table.toString(n.channels)
 				)
 			end
 			return true
 		end
 
-		cutils.DefaultNotificationParams(n, NCID, myConfig.defaultParams)
+		n.parameters = n.parameters or {}
+		cutils.ApplyDefaults(n.parameters, myConfig.defaultParams)
 
 		ui.Marquee(n)
 
@@ -981,7 +963,7 @@ local channel = {
 	end,
 	GameFrame = function() end,
 	Notify = function(n)
-		if not cutils.IsForcedChannel(n, NCID) then
+		if not cutils.HasChannel(n, NCID) then
 			return true
 		end
 
@@ -999,13 +981,96 @@ local channel = {
 return channel
 end
 
--- module: channels.ui_log  (from lua/channels/ui_log.lua)
-__B_MODULES['channels.ui_log'] = function(require)
+-- module: channels.sound  (from lua/channels/sound.lua)
+__B_MODULES['channels.sound'] = function(require)
+local cutils = require("channels.cutils")
+
+local spPlaySoundFile = Spring.PlaySoundFile
+
+local CONFIG_CATEGORY = "channels"
+local NCID = "sound"
+
+local CONFIG_DEFAULTS = {
+	enabled = true,
+	defaultParams = {
+		soundfile = "sounds/voice/en/winter/UnitLost.wav",
+		volume = 1.0,
+		channel = "sfx",
+	},
+}
+
+-- Vars
+--local logger ---@type Logger
+--local gameContext ---@type GameContext
+local config ---@type Config
+local myConfig = {} ---@type table<string, any>
+-- local ui ---@type OverwatchUi
+
+-- API
+---@type Channel
+local channel = {
+	id = NCID,
+	Init = function(l, g, c, _)
+		--logger = l:WithSection(l.section .. "::channel_" .. NCID)
+		--gameContext = g
+		config = c
+		-- ui = nui
+
+		-- Our own section in the config
+		if not config.data[CONFIG_CATEGORY] then
+			config.data[CONFIG_CATEGORY] = {}
+		end
+		if not config.data[CONFIG_CATEGORY][NCID] then
+			config.data[CONFIG_CATEGORY][NCID] = {}
+		end
+		myConfig = config.data[CONFIG_CATEGORY][NCID]
+
+		-- Apply defaults
+		cutils.ApplyDefaults(myConfig, CONFIG_DEFAULTS)
+
+		return true
+	end,
+	Shutdown = function()
+		return true
+	end,
+	GetControls = function()
+		---@type ChannelControls
+		return {
+			Enabled = function(state)
+				if state == nil then
+					return myConfig.enabled
+				end
+
+				myConfig.enabled = state
+				return state
+			end,
+		}
+	end,
+	GameFrame = function() end,
+	Notify = function(n)
+		if not cutils.HasChannel(n, NCID) then
+			return true
+		end
+
+		local params = n.parameters or {}
+		cutils.ApplyDefaults(params, myConfig.defaultParams)
+
+		spPlaySoundFile(params.soundfile, params.volume, nil, params.channel)
+
+		return true
+	end,
+}
+
+return channel
+end
+
+-- module: channels.uilog  (from lua/channels/uilog.lua)
+__B_MODULES['channels.uilog'] = function(require)
 local cutils = require("channels.cutils")
 local constants = require("core.constants")
 
 local CONFIG_CATEGORY = "channels"
-local NCID = "uiLog"
+local NCID = "uilog"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
@@ -2418,31 +2483,21 @@ return {
 		resource_stale = {
 			enabled = true,
 			blueprint = "resource_stale",
-			forceChannels = {
-				[1] = "marquee",
-				[2] = "ui_log",
-			},
+			channels = { "marquee", "uilog" },
 		},
 		resource_stale_say = {
 			enabled = false,
 			blueprint = "resource_stale",
 			template = "I'm staling %{kind} (auto-message)",
-			forceChannels = {
-				[1] = "command",
-			},
+			channels = { "command" },
 			parameters = {
-				kind = {
-					[1] = "metal",
-				},
+				kind = { "metal" },
 			},
 		},
 		resource_waste = {
 			enabled = true,
 			blueprint = "resource_waste",
-			forceChannels = {
-				[1] = "marquee",
-				[2] = "ui_log",
-			},
+			channels = { "marquee", "uilog" },
 			parameters = {
 				channels = {
 					marquee = {
@@ -2460,9 +2515,7 @@ return {
 			enabled = false,
 			blueprint = "resource_waste",
 			template = "I'm excessing %{excess} of %{kind} (auto-message)",
-			forceChannels = {
-				[1] = "command",
-			},
+			channels = { "command" },
 		},
 		unit_limit = {
 			enabled = true,
@@ -2482,6 +2535,7 @@ return {
 		unit_lost_ping = {
 			enabled = true,
 			blueprint = "unit_lost_ping",
+			channels = { "ping", "sound" },
 			parameters = {
 				commanders = true,
 			},
@@ -2659,8 +2713,6 @@ local CONFIG_DEFAULTS = {
 	logMax = IS_RELEASE and 100 or 500,
 }
 
-local MARQUEE_NCID = "marquee"
-
 local MODEL_NAME = "overwatch"
 local RML_PATH = "LuaUI/Widgets/overwatch.rml"
 local RCSS_PATH = "LuaUI/Widgets/overwatch.rcss"
@@ -2823,10 +2875,13 @@ local function drawMarqueeMessage()
 		return
 	end
 
+	local params = marqueeMessage.parameters
+	if not params then
+		return
+	end
+
 	local currentTimer = spGetTimer()
 	local elapsed = spDiffTimers(currentTimer, marqueeStartTime)
-
-	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
 
 	-- Check if message should be dismissed.
 	if elapsed > params.duration then
@@ -3618,9 +3673,10 @@ local ui = require("ui.rml_ui")
 local channels = {
 	require("channels.command"),
 	require("channels.console"),
-	require("channels.ui_log"),
+	require("channels.uilog"),
 	require("channels.marquee"),
 	require("channels.ping"),
+	require("channels.sound"),
 }
 
 ---@type Blueprint[]
@@ -3655,7 +3711,7 @@ local CONFIG_RULE_OPTS = {
 	icon = "string",
 	template = "string",
 	parameters = "table",
-	forceChannels = "table",
+	channels = "table",
 }
 
 --Per rule defaults
@@ -3741,7 +3797,7 @@ local function distribute(n)
 
 	-- Apply config if not overriden.
 	n.seconds = n.seconds or gameContext.seconds
-	n.forceChannels = n.forceChannels or nconf.forceChannels
+	n.channels = n.channels or nconf.channels
 	n.priority = n.priority or nconf.priority
 	n.category = n.category or nconf.category
 	n.icon = n.icon or nconf.icon

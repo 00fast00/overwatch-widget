@@ -1,6 +1,8 @@
 # Overwatch
 
-A scriptable notification engine for [Recoil Engine](https://recoilengine.org/).
+A scriptable notification engine for the [Recoil Engine](https://recoilengine.org/).
+
+[2025-11-11-preview.webm](https://github.com/user-attachments/assets/df685b5c-7513-41bd-82bb-760f577181b6)
 
 ## Features
 

@@ -163,7 +163,7 @@ case "${COMMAND}" in
     build_release
     commit_workflow
     ;;
-  "all" | *)
+  "build" | *)
     build_debug
     build_release
     ;;

@@ -1,3 +1,5 @@
+-- Debugging rules, all disabled by default. Some produce LOTS of notifications when enabled.
+
 ---@type ConfigFormat
 return {
 	rules = {
@@ -52,7 +54,7 @@ return {
 		},
 		debug_unit_got_simple = {
 			enabled = false,
-			blueprint = "unit_got",
+			blueprint = "unit_new",
 			parameters = {
 				watchFor = {
 					[1] = "armflea",

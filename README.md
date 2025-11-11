@@ -1,15 +1,11 @@
 # Overwatch
 
-> _WARNING_: This is in development, it does not much at the moment.
-
 A scriptable notification engine for [Recoil Engine](https://recoilengine.org/).
 
 ## Features
 
 - Rules for game events, resources, and unit builds
-- Provides configurable alerts for economy, defenses, and critical milestones
-- Shows notification stats and rule configuration
-- Supports all kinds of game modes with special support for BAR Raptors and Scavengers.
+- Does console, uilog (panel), sound, ping, command (/say a:) and marquee messages
 
 ## Installation & Setup
 

@@ -1,3 +1,5 @@
+-- This config is shipped with the widget, no need to copy.
+
 ---@type ConfigFormat
 return {
 	rules = {

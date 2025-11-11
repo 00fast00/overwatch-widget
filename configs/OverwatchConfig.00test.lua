@@ -1,3 +1,5 @@
+-- Noone has a use for them except fast with testing.
+
 ---@type ConfigFormat
 return {
 	rules = {

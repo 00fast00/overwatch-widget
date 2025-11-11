@@ -2477,6 +2477,8 @@ end
 
 -- module: default_config  (from lua/default_config.lua)
 __B_MODULES['default_config'] = function(require)
+-- This config is shipped with the widget, no need to copy.
+
 ---@type ConfigFormat
 return {
 	rules = {

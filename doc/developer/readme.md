@@ -7,14 +7,18 @@
 - `library/`
   - `BAR/`: Type definitions from Beyond-All-Reason project. [source](https://github.com/beyond-all-reason/Beyond-All-Reason/blob/25b67298a2d4f9d97ed3ccd27c48a82256ae9c5c/types)
   - `BAR_LuaUI/`: Definitions specific for BAR Widget development, also here to provide a nice list of dependencies instead of suppressing warnings.
+- `configs/`: Configurations files you can test out `*01debug.lua` and `*99fast.lua` are the only ones of any use.
 - `scripts/`
   - `build.sh`: Build, watch, commmit - all in one.
 - `lua/`: All source code that will be bundled to `dist/`
-  - `channel/`: Notification channels
+  - `builtin_blueprints/`: Blueprints shipped with the widget.
+  - `channels/`: Notification channels
   - `core/`: Reusable components, some depend on each other.
-  - `ui/`: UI variants currently "only" RmlUI.
+  - `ui/`: UI variants currently "only" RmlUi.
   - `main.lua`: Main entry point.
-- `vendor/recoil-lua-library`: LuaDoc typdefs for Recoil.
+- `vendor/`: External resources.
+  - `lua/i18n/`: https://travis-ci.org/kikito/i18n.lua we only use `interpolate` of it.
+  - `recoil-lua-library`: LuaDoc typdefs for Recoil.
 
 ## Build System
 
@@ -49,7 +53,7 @@ Think of it like building with LEGO - we create individual pieces separately, th
 
 1. You write code in separate files in the `lua/` directory
 2. The main entry point is `lua/main.lua`
-3. When you run `build.sh`, it:
+3. When you run `build.sh build`, it:
    - Replaces `local IS_RELEASE = false` with true for release builds
    - Starts luapack with `lua/main.lua`
    - Follows all `require()` statements to find dependencies
@@ -65,7 +69,7 @@ See [luapack](https://github.com/00fast00/luapack)
 ### Usage
 
 ```bash
-./scripts/build.sh [debug|release|watch|all|commit|build-commit]
+./scripts/build.sh [debug|release|watch|watch-release|build|commit|build-commit]
 ```
 
 ### Development workflow
@@ -185,9 +189,11 @@ Process flow:
 - LuaDoc / lua-language-server: https://luals.github.io/wiki/
 
 ### BAR
+
 - BAR unit list: https://github.com/beyond-all-reason/Beyond-All-Reason/blob/master/language/en/units.json
 
 ### Recoil
+
 - Recoil API: https://beyond-all-reason.github.io/RecoilEngine/docs/lua-api/
 
 ### RmlUi Development

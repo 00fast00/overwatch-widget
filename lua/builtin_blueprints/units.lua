@@ -56,7 +56,7 @@ return {
 							status = "UnitFinished",
 							teamID = data.teamID,
 							unitName = defName,
-							count = game.unitCounts[defID],
+							count = team.unitCounts[defID],
 						},
 					})
 
@@ -122,7 +122,7 @@ return {
 							status = "UnitDestroyed",
 							teamID = data.teamID,
 							unitName = defName,
-							count = game.unitCounts[defID],
+							count = team.unitCounts[defID],
 						},
 					})
 
@@ -256,7 +256,7 @@ return {
 						templateParams = {
 							state = "lost",
 							unitName = defName,
-							count = game.unitCounts[defID],
+							count = team.unitCounts[defID],
 						},
 					})
 
@@ -296,7 +296,7 @@ return {
 						templateParams = {
 							state = "got",
 							unitName = defName,
-							count = game.unitCounts[defID],
+							count = team.unitCounts[defID],
 						},
 					})
 

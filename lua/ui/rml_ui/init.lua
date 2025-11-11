@@ -69,7 +69,7 @@ local marqueeStartTime
 local NOTIFY_PRIORITY = constants.NOTIFY_PRIORITY
 local NOTIFY_PRIORITY_BACKGROUND_COLORS = {
 	[NOTIFY_PRIORITY.TRACE] = "#4a4a4a00",
-	[NOTIFY_PRIORITY.DEBUG] = "",
+	[NOTIFY_PRIORITY.DEBUG] = "#2AC8CA00",
 	[NOTIFY_PRIORITY.INFO] = "#4a4a4a00",
 	[NOTIFY_PRIORITY.WARNING] = "#00FF48AA",
 	[NOTIFY_PRIORITY.ERROR] = "#4a4a4a00",
@@ -207,6 +207,8 @@ local function drawMarqueeMessage()
 	if not marqueeMessage or not marqueeStartTime or not font2 then
 		return
 	end
+
+	Spring.Echo("in draw")
 
 	local params = marqueeMessage.parameters
 	if not params then

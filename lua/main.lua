@@ -15,10 +15,11 @@ local ui = require("ui.rml_ui")
 
 ---@type Channel[]
 local channels = {
-	require("channel.command"),
-	require("channel.console"),
-	require("channel.ui_log"),
-	require("channel.marquee"),
+	require("channels.command"),
+	require("channels.console"),
+	require("channels.ui_log"),
+	require("channels.marquee"),
+	require("channels.ping"),
 }
 
 ---@type Blueprint[]
@@ -45,7 +46,7 @@ local CONFIG_RULE_REQS = { id = "string", enabled = "boolean" } -- 'blueprint = 
 -- Per rule optional fields
 local CONFIG_RULE_OPTS = {
 	enabled = "boolean",
-	currentTeam = "boolean",
+	ownTeam = "boolean",
 	interval = "number",
 	cooldown = "number",
 	category = "string",
@@ -64,8 +65,6 @@ local CONFIG_RULE_DEFAULTS = {
 
 -- Forward declarations
 local spGetTeamList = Spring.GetTeamList
-local spGetTeamInfo = Spring.GetTeamInfo
-local spGetPlayerInfo = Spring.GetPlayerInfo
 
 -- Vars
 local initialized = false
@@ -108,36 +107,13 @@ local function hasMinLogLevel(level)
 	return LOG_LEVEL <= level
 end
 
-local function isTeamReal(allyTeamId)
-	if allyTeamId == nil then
-		return false
-	end
-	local leaderID, isDead, leaderName
-	local tids = spGetTeamList(allyTeamId)
-	if not tids then
-		return false
-	end
-
-	for _, tID in ipairs(tids) do
-		_, leaderID, isDead = spGetTeamInfo(tID, false)
-		leaderName = (
-			(WG and WG.playernames and WG.playernames.getPlayername)
-			and WG.playernames.getPlayername(leaderID)
-		) or spGetPlayerInfo(leaderID, false)
-		if leaderName ~= nil or isDead then
-			return true
-		end
-	end
-	return false
-end
-
 ---@return number[]
 local function getTeamlist()
 	local r = {}
 	local t = spGetTeamList()
 	for _, teamId in ipairs(t) do
 		local allyId = select(6, Spring.GetTeamInfo(teamId))
-		if isTeamReal(allyId) then
+		if utils.IsTeamReal(allyId) then
 			table.insert(r, teamId)
 		end
 	end
@@ -344,6 +320,32 @@ local function loadBlueprints(env)
 	return bpLoaded
 end
 
+---@param team TeamContext
+local function cleanupTeam(team)
+	if not team then
+		return
+	end
+
+	local id = team.id
+
+	-- Stop all rules listening.
+	if ruleStoppers[id] then
+		for _, trs in pairs(ruleStoppers[id]) do
+			for _, rs in pairs(trs) do
+				rs()
+			end
+		end
+		ruleStoppers[id] = nil
+	end
+
+	-- Cleanup states
+	ruleStates[id] = nil
+
+	-- Stop contexts
+	team:Shutdown()
+	teamContexts[id] = nil
+end
+
 ---@param msg string
 local function fatalRemoveMe(msg, ...)
 	logger:Fatal(msg, ...)
@@ -444,7 +446,7 @@ function widget:Initialize()
 			-- Start the rule for all teams
 			if rconf.enabled and rule.bp.Start then
 				for _, team in pairs(teamContexts) do
-					if not rconf.currentTeam or team.id == myTeamID then
+					if not rconf.ownTeam or team.id == myTeamID then
 						if not ruleStoppers[team.id] then
 							ruleStoppers[team.id] = {}
 						end
@@ -492,6 +494,12 @@ end
 function widget:Shutdown()
 	ui.Shutdown()
 
+	for _, team in pairs(teamContexts) do
+		cleanupTeam(team)
+	end
+
+	gameContext:Shutdown()
+
 	initialized = false
 end
 
@@ -503,12 +511,22 @@ function widget:GameFrame(n)
 	-- Update game context
 	gameContext:GameFrame()
 
-	local myTeamID = gameContext.myTeamID
+	-- Cleanup teamcontexts
+	for _, team in pairs(teamContexts) do
+		if team then
+			if not team:IsReal() then
+				logger:Debug("Removing team %d it's not real anymore", team.id)
+
+				cleanupTeam(team)
+			end
+		end
+	end
 
 	-- Process all rules for all teams
-	for teamID, teamContext in pairs(teamContexts) do
+	local myTeamID = gameContext.myTeamID
+	for id, team in pairs(teamContexts) do
 		-- Update team context
-		teamContext:GameFrame()
+		team:GameFrame()
 
 		-- Process each rule instance
 		for _, ruleInstance in ipairs(rules) do
@@ -516,9 +534,9 @@ function widget:GameFrame(n)
 			if
 				ruleInstance.bp.Trigger
 				and rconf.enabled
-				and (not rconf.currentTeam or teamID == myTeamID)
+				and (not rconf.ownTeam or id == myTeamID)
 			then
-				triggerRule(ruleInstance, teamID)
+				triggerRule(ruleInstance, id)
 			end
 		end
 	end

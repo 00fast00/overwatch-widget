@@ -36,6 +36,10 @@ function controls.SetDmHandle(h)
 	dmHandle = h
 end
 
+function controls:Save()
+	ui.Save()
+end
+
 function controls:Reload()
 	if not ui then
 		logger:Warning("ui controls have no ui set, reload won't work")

@@ -20,7 +20,7 @@ local DEFAULT_BG_COLOR = "#4a4a4a00"
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
-	autoSave = IS_RELEASE,
+	autoSave = false,
 	teamColoring = true,
 	prioColoring = true,
 
@@ -43,7 +43,7 @@ local CONFIG_DEFAULTS = {
 		message = { visible = true },
 	},
 
-	marqueeDuration = 0.8,
+	logMax = IS_RELEASE and 100 or 500,
 }
 
 local MARQUEE_NCID = "marquee"
@@ -95,10 +95,6 @@ local function rgbaToHex(r, g, b, a)
 end
 
 local function saveConfig()
-	if not uiConfig.autoSave then
-		return
-	end
-
 	if IS_RELEASE then
 		config:Save(
 			constants.CONFIG_DIR .. constants.CONFIG_FILE,
@@ -119,6 +115,7 @@ end
 ---@field headerName string
 ---@field panelMode string
 ---@field panel table
+---@field autoSave boolean
 ---@field showButtons boolean
 ---@field columns any
 ---@field numColumns integer
@@ -130,9 +127,13 @@ local initModel = {
 	debugging = false,
 
 	panelMode = "log",
-	panel = {},
 
+	-- start: Overwritten by config.
+	panel = {},
+	autoSave = IS_RELEASE,
 	showButtons = true,
+	logMax = 100,
+	-- end
 
 	columns = {
 		[1] = { label = "Time", width = "3.5rem", visible = true, teamColor = false },
@@ -147,7 +148,6 @@ local initModel = {
 
 	logs = {},
 	logCount = 0,
-	logMax = IS_RELEASE and 1000 or 10000,
 }
 local rmlContext ---@type RmlUi.Context?
 local dmHandle ---@type RmlUi.SolLuaDataModel<OverwatchUiModel>?
@@ -213,14 +213,15 @@ local function drawMarqueeMessage()
 	local currentTimer = spGetTimer()
 	local elapsed = spDiffTimers(currentTimer, marqueeStartTime)
 
+	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
+
 	-- Check if message should be dismissed.
-	if elapsed > uiConfig.marqueeDuration then
+	if elapsed > params.duration then
 		marqueeMessage = nil
 		marqueeStartTime = nil
 		return
 	end
 
-	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
 	local fc = params.fontColor
 	local foc = params.fontOutlineColor
 
@@ -291,6 +292,8 @@ local ui = {
 		-- Copy users panel config into the data model.
 		initModel.panel = table.copy(uiConfig.panel)
 		initModel.showButtons = uiConfig.showButtons
+		initModel.autoSave = uiConfig.autoSave
+		initModel.logMax = uiConfig.logMax
 
 		initModel.columns[1].visible = uiConfig.columns.time.visible
 		initModel.columns[2].visible = uiConfig.columns.playerName.visible
@@ -339,7 +342,7 @@ local ui = {
 			return false
 		end
 
-		local remember = { "left", "top", "width", "hight" }
+		local remember = { "left", "top", "width", "height" }
 		widget:AddEventListener("blur", function()
 			if not uiConfig["panel"] then
 				uiConfig["panel"] = {}
@@ -355,7 +358,7 @@ local ui = {
 				end
 			end
 
-			if dirty then
+			if dirty and uiConfig.autoSave then
 				saveConfig()
 			end
 		end, true)
@@ -386,6 +389,10 @@ local ui = {
 		rmlContext = nil
 
 		return true
+	end,
+
+	Save = function()
+		saveConfig()
 	end,
 
 	SetTeamContext = function(team)
@@ -454,14 +461,10 @@ local ui = {
 	Marquee = function(n)
 		if marqueeMessage or marqueeStartTime or not font2 then
 			if logger.level >= LogLevel.TRACE2 then
-				logger:Trace2("Marquee message: %s", n.message)
+				logger:Trace2("Not sending marquee message: %s", n.message)
 			end
 
 			return
-		end
-
-		if logger.level >= LogLevel.TRACE then
-			logger:Trace("Marquee message: %s", n.message)
 		end
 
 		marqueeMessage = n
@@ -495,7 +498,9 @@ local ui = {
 			end
 
 			-- Save
-			saveConfig()
+			if uiConfig.autoSave then
+				saveConfig()
+			end
 		end
 
 		return false

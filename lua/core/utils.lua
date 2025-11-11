@@ -1,4 +1,7 @@
--- Result
+local spGetTeamList = Spring.GetTeamList
+local spGetTeamInfo = Spring.GetTeamInfo
+local spGetPlayerInfo = Spring.GetPlayerInfo
+
 local utils = {}
 
 -- Transfrom the given class with name and provided field list into:
@@ -49,11 +52,12 @@ function utils.ApplyDefaults(target, defaults)
 
 	for k, v in pairs(defaults) do
 		local vt = type(v)
+		local tt = type(target[k])
 
 		if target[k] == nil then
 			-- Apply default if key doesn't exist in target
 			target[k] = v
-		elseif vt == "table" and type(target[k]) == "table" then
+		elseif vt == "table" and tt == "table" then
 			-- If both are tables, recursively apply defaults
 			utils.ApplyDefaults(target[k], v)
 		end
@@ -93,7 +97,7 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 		for k, v in pairs(reqs) do
 			if type(validate[k]) == v then
 				if type(target[k]) == "table" then
-					utils.ApplyDefaults(target[k], validate[k])
+					target[k] = table.merge(target[k], validate[k])
 				else
 					target[k] = validate[k]
 				end
@@ -106,7 +110,7 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 		for k, v in pairs(opts) do
 			if type(validate[k]) == v then
 				if type(target[k]) == "table" then
-					utils.ApplyDefaults(target[k], validate[k])
+					target[k] = table.merge(target[k], validate[k])
 				else
 					target[k] = validate[k]
 				end
@@ -116,6 +120,32 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 
 	-- Success
 	return nil
+end
+
+-- IsTeamReal checks if the given ally team id is a real team.
+--
+---@param allyTeamId number The ally team to query.
+function utils.IsTeamReal(allyTeamId)
+	if allyTeamId == nil then
+		return false
+	end
+	local leaderID, isDead, leaderName
+	local tids = spGetTeamList(allyTeamId)
+	if not tids then
+		return false
+	end
+
+	for _, tID in ipairs(tids) do
+		_, leaderID, isDead = spGetTeamInfo(tID, false)
+		leaderName = (
+			(WG and WG.playernames and WG.playernames.getPlayername)
+			and WG.playernames.getPlayername(leaderID)
+		) or spGetPlayerInfo(leaderID, false)
+		if leaderName ~= nil or isDead then
+			return true
+		end
+	end
+	return false
 end
 
 return utils

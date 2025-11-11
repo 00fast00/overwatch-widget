@@ -23,17 +23,19 @@ local levelNames = {
 ---@param level MyLogLevel
 ---@return string
 local function levelName(level)
+	-- Direct mapping
+	if levelNames[level] then
+		return levelNames[level]
+	end
+
+	-- Overflow.
 	if level <= LogLevel.ALL then
 		return "ALL"
 	elseif level >= LogLevel.NONE then
 		return "NONE"
 	end
 
-	-- Direct mapping
-	if levelNames[level] then
-		return levelNames[level]
-	end
-
+	-- Inbetween.
 	if level > LogLevel.FATAL then
 		return "FATAL+" .. (level - LogLevel.FATAL)
 	end

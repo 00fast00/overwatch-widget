@@ -2,7 +2,7 @@
 
 > _WARNING_: This is in development, it does not much at the moment.
 
-A configurable and scriptable notification engine for [Recoil Engine](https://recoilengine.org/).
+A scriptable notification engine for [Recoil Engine](https://recoilengine.org/).
 
 ## Features
 

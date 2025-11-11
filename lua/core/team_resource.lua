@@ -96,6 +96,10 @@ function TeamResource.New(team, resourceType, logger)
 	return self
 end
 
+function TeamResource:Shutdown()
+	self._subscribers = {}
+end
+
 ---@return string
 function TeamResource:__tostring()
 	return utils.DumpClass(self, "TeamResource", {

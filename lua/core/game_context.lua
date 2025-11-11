@@ -30,6 +30,7 @@ local spGetGameRulesParam = Spring.GetGameRulesParam
 ---@field maxUnitsPerPlayer integer
 ---@field frame number Current game frame
 ---@field time number Current game time
+---@field startupSeconds number Game time at startup
 ---@field seconds number Current game time in seconds
 ---@field pveMode string The PVE mode, currently one of: "raptors", "scavengers", or "none"
 ---@field bossAnger number Queen/Boss anger level (0-100)
@@ -58,6 +59,7 @@ function GameContext.New(cleanUpInterval, logger)
 		modOptions = Spring.GetModOptions(),
 		maxUnits = Game.maxUnits,
 		frame = 0,
+		startupSeconds = spGetGameSeconds() or 0,
 		seconds = 0,
 		bossAnger = 0,
 		bossHealth = 0,
@@ -74,10 +76,13 @@ function GameContext.New(cleanUpInterval, logger)
 	}, GameContext)
 
 	-- Do not cleanup on start / recreation of widget
-	local seconds = spGetGameSeconds() or 0
-	self._lastCleanup = seconds + cleanUpInterval
+	self._lastCleanup = self.startupSeconds + cleanUpInterval
 
 	return self
+end
+
+function GameContext:Shutdown()
+	self._subscribers = {}
 end
 
 ---@return string

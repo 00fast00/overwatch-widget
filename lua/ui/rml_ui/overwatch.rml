@@ -13,12 +13,15 @@
 
         <div class="header">
             <h1>Overwatch</h1>
-            <button class="button"
-                    data-if="panelMode == 'settings'"
-                    onclick="widget:SetPanelMode('log')">Log</button>
-            <button class="button"
-                    data-if="panelMode == 'log'"
-                    onclick="widget:SetPanelMode('settings')">Settings</button>
+            <div>
+                <button class="button" onclick="widget:Save()" data-if="autoSave != true">Save</button>
+                <button class="button"
+                        data-if="panelMode == 'settings'"
+                        onclick="widget:SetPanelMode('log')">Log</button>
+                <button class="button"
+                        data-if="panelMode == 'log'"
+                        onclick="widget:SetPanelMode('settings')">Settings</button>
+            </div>
         </div>
 
         <div class="log-container" data-if="panelMode == 'log'">

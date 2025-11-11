@@ -5,7 +5,7 @@
 ---@field enabled boolean
 ---
 ---@field interval integer? Periodic interval
----@field currentTeam boolean? Run only with the current team instead per team?
+---@field ownTeam boolean? Run only with the current team instead per team?
 ---@field cooldown integer?
 ---@field category string?
 ---@field priority NotifyPriority?
@@ -29,7 +29,7 @@
 ---@field template string Message template for notifications
 --
 ---@field forceChannels string[]? Channels to force send the message (ignores priority on them).
----@field currentTeam boolean? Run only with the current team instead per team?
+---@field ownTeam boolean? Run only with the current team instead per team?
 ---@field interval integer? Seconds between condition checks
 ---@field id string? Unique identifier
 ---@field enabled boolean? Whether the rule is enabled (default false)
@@ -49,6 +49,7 @@
 ---@field priority NotifyPriority? Notification priority level. Overrides config if given.
 ---@field category string? Overrides config if given.
 ---@field icon string? Icon to display with the notification. Overrides config if given.
+---@field parameters table<string, any>? Custom parameters for the
 
 ---@alias NotifierFun fun(n: Notification)
 ---@alias BpStartFun fun(game: GameContext, team: TeamContext, config: RuleConfig, notify: NotifierFun): function[]?
@@ -123,6 +124,8 @@
 ---@class OverwatchUi: OverwatchUiCallins
 ---@field Init fun(logger: Logger?, game: GameContext?, config: Config?): boolean
 ---@field Shutdown fun(): boolean
+-- Save saves the config, no questions asked.
+---@field Save fun()
 --
 -- Set/update the given teamcontext.
 ---@field SetTeamContext fun(team: TeamContext)

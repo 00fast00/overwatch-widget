@@ -60,7 +60,7 @@ local list = {
 			icon = "ℹ️",
 			template = "%{game}",
 			interval = 60,
-			currentTeam = true,
+			ownTeam = true,
 		},
 
 		Trigger = function(game, team, config, state, notify)
@@ -127,7 +127,7 @@ local list = {
 			icon = "ℹ️",
 			template = "game(%{teamID}) %{status}: %{unitName}: %{count}",
 			cooldown = 10,
-			currentTeam = true,
+			ownTeam = true,
 		},
 
 		Start = function(game, team, config, notify)
@@ -246,7 +246,7 @@ local list = {
 			for _, kind in ipairs({ ResourceType.METAL, ResourceType.ENERGY }) do
 				local resource = team:GetResource(kind)
 
-				local is_full_last_triggered = 0
+				local is_full_last_triggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -279,7 +279,7 @@ local list = {
 					)
 				)
 
-				local is_low_last_triggered = 0
+				local is_low_last_triggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -312,7 +312,7 @@ local list = {
 					)
 				)
 
-				local is_below_last_triggered = 0
+				local is_below_last_triggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -345,7 +345,7 @@ local list = {
 					)
 				)
 
-				local is_above_last_triggered = 0
+				local is_above_last_triggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -411,7 +411,7 @@ local list = {
 					)
 				)
 
-				local has_excess_last_triggered = 0
+				local has_excess_last_triggered = game.startupSeconds
 				local excess_treshold = 0.01
 				table.insert(
 					unsubs,

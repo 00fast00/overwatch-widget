@@ -77,7 +77,8 @@ See [luapack](https://github.com/00fast00/luapack)
 
 ## Debugging / Testing Tipps
 
-- Reenable in `Settings->Custom` to load again.
+- It helps a lot to have BAR in devmode installed, see: https://github.com/beyond-all-reason/Beyond-All-Reason/blob/master/README.md
+- Reenable in `Settings->Custom` to load again. Devmode does autoreload them somehow.
 - Use a second instance of your editor to open `dist` so you aren't getting masses of diagnostic errors.
 - Use these in `springsettings.cfg` to have a full infolog.txt
   ```ini

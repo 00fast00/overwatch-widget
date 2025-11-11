@@ -1,34 +1,38 @@
+local cutils = require("channels.cutils")
 local constants = require("core.constants")
-local cutils = require("channel.cutils")
-
-local spEcho = Spring.Echo
 
 local CONFIG_CATEGORY = "channels"
-local NCID = "console"
+local NCID = "marquee"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
-	format = "[%{ruleId}] %{message}",
-	minPriority = constants.NOTIFY_PRIORITY.INFO,
+	minPriority = constants.NOTIFY_PRIORITY.ERROR,
 	maxPriority = -1,
+	defaultParams = {
+		speed = 0.08,
+		duration = 6,
+		fontSize = 32,
+		fontColor = { r = 1, g = 1, b = 0, a = 1 }, -- Yellow text.
+		fontOutlineColor = { r = 0, g = 0, b = 0, a = 1 },
+	},
 }
 
 -- Vars
 local logger ---@type Logger
--- local gameContext ---@type GameContext
+local gameContext ---@type GameContext
 local config ---@type Config
 local myConfig = {} ---@type table<string, any>
--- local ui ---@type OverwatchUi
+local ui ---@type OverwatchUi
 
 -- API
 ---@type Channel
 local channel = {
 	id = NCID,
-	Init = function(l, _, c, _)
+	Init = function(l, g, c, u)
 		logger = l:WithSection(l.section .. "::channel_" .. NCID)
-		-- gameContext = g
+		gameContext = g
 		config = c
-		-- ui = nui
+		ui = u
 
 		-- Our own section in the config
 		if not config.data[CONFIG_CATEGORY] then
@@ -62,15 +66,25 @@ local channel = {
 	end,
 	GameFrame = function() end,
 	Notify = function(n)
-		if not cutils.ShouldSend(n, NCID, myConfig) then
-			if logger.level >= constants.LogLevel.TRACE3 then
-				logger:Trace3("Not sending message: %s", n.config.id)
-			end
-
+		-- Never send marequee in spec mode.
+		if gameContext.inSpecMode then
 			return true
 		end
 
-		spEcho(cutils.Interpolate(myConfig.format, n))
+		if not cutils.ShouldSend(n, NCID, myConfig) then
+			if logger.level >= constants.LogLevel.TRACE3 then
+				logger:Trace3(
+					"Not sending message: %s, %s",
+					n.config.id,
+					table.toString(n.forceChannels)
+				)
+			end
+			return true
+		end
+
+		cutils.DefaultNotificationParams(n, NCID, myConfig.defaultParams)
+
+		ui.Marquee(n)
 
 		return true
 	end,

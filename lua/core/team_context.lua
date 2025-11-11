@@ -74,6 +74,14 @@ function TeamContext.New(id, logger)
 	return self
 end
 
+function TeamContext:Shutdown()
+	for _, r in pairs(self._resources) do
+		r:Shutdown()
+	end
+
+	self._subscribers = {}
+end
+
 ---@return string
 function TeamContext:__tostring()
 	return utils.DumpClass(
@@ -130,6 +138,13 @@ function TeamContext:Subscribe(caller, topic, callback)
 
 		table.removeAll(self._subscribers[topic], callback)
 	end
+end
+
+-- IsReal checks if the current team is real.
+--.
+---@return boolean
+function TeamContext:IsReal()
+	return utils.IsTeamReal(self.allyTeamId)
 end
 
 function TeamContext:updateUnitCount()

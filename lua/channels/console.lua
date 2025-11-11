@@ -1,12 +1,15 @@
-local cutils = require("channel.cutils")
 local constants = require("core.constants")
+local cutils = require("channels.cutils")
+
+local spEcho = Spring.Echo
 
 local CONFIG_CATEGORY = "channels"
-local NCID = "uiLog"
+local NCID = "console"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
-	minPriority = constants.NOTIFY_PRIORITY.TRACE,
+	format = "[%{ruleId}] %{message}",
+	minPriority = constants.NOTIFY_PRIORITY.INFO,
 	maxPriority = -1,
 }
 
@@ -15,17 +18,17 @@ local logger ---@type Logger
 -- local gameContext ---@type GameContext
 local config ---@type Config
 local myConfig = {} ---@type table<string, any>
-local ui ---@type OverwatchUi
+-- local ui ---@type OverwatchUi
 
 -- API
 ---@type Channel
 local channel = {
 	id = NCID,
-	Init = function(l, _, c, u)
+	Init = function(l, _, c, _)
 		logger = l:WithSection(l.section .. "::channel_" .. NCID)
 		-- gameContext = g
 		config = c
-		ui = u
+		-- ui = nui
 
 		-- Our own section in the config
 		if not config.data[CONFIG_CATEGORY] then
@@ -67,7 +70,7 @@ local channel = {
 			return true
 		end
 
-		ui.Log(n)
+		spEcho(cutils.Interpolate(myConfig.format, n))
 
 		return true
 	end,

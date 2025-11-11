@@ -90,5 +90,12 @@ return {
 			enabled = true,
 			blueprint = "resource_converter_level",
 		},
+		unit_lost_ping = {
+			enabled = true,
+			blueprint = "unit_lost_ping",
+			parameters = {
+				commanders = true,
+			},
+		},
 	},
 }

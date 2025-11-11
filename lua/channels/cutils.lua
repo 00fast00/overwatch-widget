@@ -8,6 +8,21 @@ cutils.ApplyDefaults = utils.ApplyDefaults
 
 ---@param n Notification
 ---@param NCID string
+---@return boolean
+function cutils.IsForcedChannel(n, NCID)
+	if not n.forceChannels then
+		return false
+	end
+
+	if table.contains(n.forceChannels, NCID) then
+		return true
+	end
+
+	return false
+end
+
+---@param n Notification
+---@param NCID string
 ---@param myConfig table
 ---@return boolean
 function cutils.ShouldSend(n, NCID, myConfig)
@@ -15,14 +30,17 @@ function cutils.ShouldSend(n, NCID, myConfig)
 		return false
 	end
 
-	if n.forceChannels then
-		if table.contains(n.forceChannels, NCID) then
-			return true
-		end
+	-- Send if forced.
+	if cutils.IsForcedChannel(n, NCID) then
+		return true
+	end
 
+	-- Do not send if forceChannels exists but we are not in.
+	if n.forceChannels then
 		return false
 	end
 
+	-- Check priority
 	if
 		(myConfig.minPriority > 0 and n.priority < myConfig.minPriority)
 		or (myConfig.maxPriority > 0 and n.priority > myConfig.maxPriority)
@@ -52,7 +70,13 @@ function cutils.DefaultNotificationParams(n, NCID, defaultParams)
 end
 
 function cutils.Interpolate(format, n)
+	if not format then
+		return "invalid empty format!"
+	end
+
 	return interpolate(format, {
+		playerName = n.team.leaderName,
+		teamId = n.team.id,
 		ruleId = n.config.id,
 		priorityName = constants.NOTIFY_PRIORITY_NAMES[n.priority],
 		message = n.message or "",

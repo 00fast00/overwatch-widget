@@ -640,7 +640,7 @@ local NCID = "console"
 
 local CONFIG_DEFAULTS = {
 	enabled = true,
-	format = "%{ruleId}(%{priorityName}): %{message}",
+	format = "[%{ruleId}] %{message}",
 	minPriority = constants.NOTIFY_PRIORITY.INFO,
 	maxPriority = -1,
 }
@@ -2460,7 +2460,7 @@ local CONFIG_DEFAULTS = {
 
 	panel = {
 		height = "261px",
-		left = "1651px",
+		left = "1595px",
 		top = "1122px",
 		width = "606px",
 	},
@@ -3172,8 +3172,9 @@ h1 {
 
 .logs .log-buttons {
     display: inline;
-    position: absolute;
-    right: 24dp;
+    position: relative;
+    right: 0;
+    top: 0;
 }
 
 .logs .form-button {
@@ -3310,6 +3311,17 @@ sliderarrowdec:hover
 {
 	background-color: rgb(150,150,150);
 }
+
+
+
+
+
+
+
+
+
+
+
 ]]
 end
 
@@ -3355,12 +3367,12 @@ return [[
                                     <form onsubmit="widget:Say(event, true)">
                                         <input type="text" name="player" data-value="log[1].value" style="display: none" />
                                         <input type="text" name="message" data-value="log[6].value" style="display: none" />
-                                        <input type="submit" class="form-button">Global</input>
+                                        <input type="submit" class="form-button">G</input>
                                     </form>
                                     <form onsubmit="widget:Say(event, false)" data-if="it_index + 1 == numColumns">
                                         <input type="text" name="player" data-value="log[1].value" style="display: none" />
                                         <input type="text" name="message" data-value="log[6].value" style="display: none" />
-                                        <input type="submit" class="form-button">Team</input>
+                                        <input type="submit" class="form-button">T</input>
                                     </form>
                                 </div>
                             </td>
@@ -3383,10 +3395,6 @@ return [[
     <handle size_target="overwatch-widget" class="size_handle cursor-move">&nbsp;</handle>
 </body>
 </rml>
-
-
-
-
 
 
 
@@ -3460,7 +3468,7 @@ local CONFIG_RULE_REQS = { id = "string", enabled = "boolean" } -- 'blueprint = 
 -- Per rule optional fields
 local CONFIG_RULE_OPTS = {
 	enabled = "boolean",
-	once = "boolean",
+	currentTeam = "boolean",
 	interval = "number",
 	cooldown = "number",
 	category = "string",
@@ -3473,7 +3481,6 @@ local CONFIG_RULE_OPTS = {
 
 --Per rule defaults
 local CONFIG_RULE_DEFAULTS = {
-	once = false,
 	cooldown = IS_RELEASE and 10 or 0,
 	interval = IS_RELEASE and 60 or 1,
 }
@@ -3860,7 +3867,7 @@ function widget:Initialize()
 			-- Start the rule for all teams
 			if rconf.enabled and rule.bp.Start then
 				for _, team in pairs(teamContexts) do
-					if not rconf.once or team.id == myTeamID then
+					if not rconf.currentTeam or team.id == myTeamID then
 						if not ruleStoppers[team.id] then
 							ruleStoppers[team.id] = {}
 						end
@@ -3932,7 +3939,7 @@ function widget:GameFrame(n)
 			if
 				ruleInstance.bp.Trigger
 				and rconf.enabled
-				and (not rconf.once or teamID == myTeamID)
+				and (not rconf.currentTeam or teamID == myTeamID)
 			then
 				triggerRule(ruleInstance, teamID)
 			end

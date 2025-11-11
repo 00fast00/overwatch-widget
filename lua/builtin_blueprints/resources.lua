@@ -23,7 +23,7 @@ return {
 			for _, kind in ipairs(config.parameters.kinds) do
 				local resource = team:GetResource(kind)
 
-				local lastTriggered = 0
+				local lastTriggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -78,7 +78,7 @@ return {
 			for _, kind in ipairs(config.parameters.kinds) do
 				local resource = team:GetResource(kind)
 
-				local lastTriggered = 0
+				local lastTriggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -120,7 +120,7 @@ return {
 			category = "resource",
 			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
-			template = "You'r converter slider of %<mmLevel>.d is to high, pull the yellow box in the E bar all the way down!",
+			template = "You'r converter slider of %<mmLevel>.f is to high, pull the yellow box in the E bar all the way down!",
 			interval = 60 * 3, -- 3 minutes.
 			parameters = {
 				threshold = 0.75, -- seems to be the default
@@ -128,14 +128,16 @@ return {
 		},
 
 		Trigger = function(game, team, config, state, notify)
-			local mmLevel = team:GetRulesParamNum("mmLevel", 0)
+			-- local mmLevel = team:GetRulesParamNum("mmLevel", 0)
+			local mmLevel = Spring.GetTeamRulesParam(team.id, "mmLevel")
 
 			if mmLevel >= config.parameters.threshold then
 				notify({
 					team = team,
 					config = config,
 					templateParams = {
-						mmLevel = mmLevel * 100,
+						mmLevel = mmLevel,
+						threshold = config.parameters.threshold,
 					},
 				})
 

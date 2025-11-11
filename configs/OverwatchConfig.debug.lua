@@ -34,7 +34,7 @@ return {
 		},
 		debug_event_teamcontext_units = {
 			blueprint = "debug_event_teamcontext_units",
-			enabled = true,
+			enabled = false,
 		},
 		debug_event_resources = {
 			blueprint = "debug_event_resources",

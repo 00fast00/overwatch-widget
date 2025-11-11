@@ -5,7 +5,7 @@
 ---@field enabled boolean
 ---
 ---@field interval integer? Periodic interval
----@field once boolean? Run once instead per team?
+---@field currentTeam boolean? Run only with the current team instead per team?
 ---@field cooldown integer?
 ---@field category string?
 ---@field priority NotifyPriority?
@@ -29,7 +29,7 @@
 ---@field template string Message template for notifications
 --
 ---@field forceChannels string[]? Channels to force send the message (ignores priority on them).
----@field once boolean? Run once instead per team?
+---@field currentTeam boolean? Run only with the current team instead per team?
 ---@field interval integer? Seconds between condition checks
 ---@field id string? Unique identifier
 ---@field enabled boolean? Whether the rule is enabled (default false)

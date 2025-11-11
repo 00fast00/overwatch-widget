@@ -45,7 +45,7 @@ local CONFIG_RULE_REQS = { id = "string", enabled = "boolean" } -- 'blueprint = 
 -- Per rule optional fields
 local CONFIG_RULE_OPTS = {
 	enabled = "boolean",
-	once = "boolean",
+	currentTeam = "boolean",
 	interval = "number",
 	cooldown = "number",
 	category = "string",
@@ -58,7 +58,6 @@ local CONFIG_RULE_OPTS = {
 
 --Per rule defaults
 local CONFIG_RULE_DEFAULTS = {
-	once = false,
 	cooldown = IS_RELEASE and 10 or 0,
 	interval = IS_RELEASE and 60 or 1,
 }
@@ -445,7 +444,7 @@ function widget:Initialize()
 			-- Start the rule for all teams
 			if rconf.enabled and rule.bp.Start then
 				for _, team in pairs(teamContexts) do
-					if not rconf.once or team.id == myTeamID then
+					if not rconf.currentTeam or team.id == myTeamID then
 						if not ruleStoppers[team.id] then
 							ruleStoppers[team.id] = {}
 						end
@@ -517,7 +516,7 @@ function widget:GameFrame(n)
 			if
 				ruleInstance.bp.Trigger
 				and rconf.enabled
-				and (not rconf.once or teamID == myTeamID)
+				and (not rconf.currentTeam or teamID == myTeamID)
 			then
 				triggerRule(ruleInstance, teamID)
 			end

@@ -60,7 +60,7 @@ local list = {
 			icon = "ℹ️",
 			template = "%{game}",
 			interval = 60,
-			once = true,
+			currentTeam = true,
 		},
 
 		Trigger = function(game, team, config, state, notify)
@@ -127,7 +127,7 @@ local list = {
 			icon = "ℹ️",
 			template = "game(%{teamID}) %{status}: %{unitName}: %{count}",
 			cooldown = 10,
-			once = true,
+			currentTeam = true,
 		},
 
 		Start = function(game, team, config, notify)

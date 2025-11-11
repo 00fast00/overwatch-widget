@@ -26,8 +26,8 @@ local CONFIG_DEFAULTS = {
 
 	panel = {
 		height = "261px",
-		left = "1651px",
-		top = "1122px",
+		left = "1545px",
+		top = "1120px",
 		width = "606px",
 	},
 

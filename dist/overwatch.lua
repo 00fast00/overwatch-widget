@@ -2689,7 +2689,7 @@ local DEFAULT_BG_COLOR = "#4a4a4a00"
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
-	autoSave = false,
+	autoSave = IS_RELEASE,
 	teamColoring = true,
 	prioColoring = true,
 

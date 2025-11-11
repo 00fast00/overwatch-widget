@@ -60,7 +60,7 @@ return {
 			for _, kind in ipairs(config.parameters.kinds) do
 				local resource = team:GetResource(kind)
 
-				local lastTriggered = 0
+				local lastTriggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -115,7 +115,7 @@ return {
 			for _, kind in ipairs(config.parameters.kinds) do
 				local resource = team:GetResource(kind)
 
-				local lastTriggered = 0
+				local lastTriggered = game.startupSeconds
 				table.insert(
 					unsubs,
 					resource:Subscribe(
@@ -157,7 +157,7 @@ return {
 			category = "resource",
 			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
-			template = "You'r converter slider of %<mmLevel>.d is to high, pull the yellow box in the E bar all the way down!",
+			template = "You'r converter slider of %<mmLevel>.f is to high, pull the yellow box in the E bar all the way down!",
 			interval = 60 * 3, -- 3 minutes.
 			parameters = {
 				threshold = 0.75, -- seems to be the default
@@ -165,14 +165,16 @@ return {
 		},
 
 		Trigger = function(game, team, config, state, notify)
-			local mmLevel = team:GetRulesParamNum("mmLevel", 0)
+			-- local mmLevel = team:GetRulesParamNum("mmLevel", 0)
+			local mmLevel = Spring.GetTeamRulesParam(team.id, "mmLevel")
 
 			if mmLevel >= config.parameters.threshold then
 				notify({
 					team = team,
 					config = config,
 					templateParams = {
-						mmLevel = mmLevel * 100,
+						mmLevel = mmLevel,
+						threshold = config.parameters.threshold,
 					},
 				})
 
@@ -189,109 +191,12 @@ end
 __B_MODULES['builtin_blueprints.units'] = function(require)
 local constants = require("core.constants")
 
+local spGetUnitPosition = Spring.GetUnitPosition
+
 ---@type Blueprint[]
 return {
 	{
-		id = "commander_new",
-		description = "Watches for gaining commanders",
-		defaultConfig = {
-			category = "units",
-			priority = constants.NOTIFY_PRIORITY.INFO,
-			icon = "ℹ️",
-			template = "You got a commander: %{unitName}",
-			cooldown = 10,
-			parameters = {
-				minSeconds = 10,
-			},
-		},
-
-		Start = function(game, team, config, notify)
-			local unsubs = {}
-
-			local lastTriggered = config.parameters.minSeconds
-			table.insert(
-				unsubs,
-				team:Subscribe("commander_new", "UnitFinished", function(data)
-					if
-						lastTriggered > 0
-						and config.cooldown > 0
-						and game.seconds - lastTriggered < config.cooldown
-					then
-						return
-					end
-
-					local defID = data.defID
-					local unitDef = UnitDefs[defID]
-
-					if not (unitDef.customParams and unitDef.customParams.iscommander) then
-						return
-					end
-
-					notify({
-						team = team,
-						config = config,
-						templateParams = {
-							unitName = unitDef.name,
-						},
-					})
-
-					lastTriggered = game.seconds
-				end)
-			)
-
-			return unsubs
-		end,
-	},
-	{
-		id = "commander_lost",
-		description = "Watches for loosing commanders",
-		defaultConfig = {
-			category = "units",
-			priority = constants.NOTIFY_PRIORITY.CRITICAL,
-			icon = "ℹ️",
-			template = "You lost a commander: %{unitName}",
-			cooldown = 10,
-		},
-
-		Start = function(game, team, config, notify)
-			local unsubs = {}
-
-			local lastTriggered = 0
-			table.insert(
-				unsubs,
-				team:Subscribe("commander_lost", "UnitDestroyed", function(data)
-					if
-						lastTriggered > 0
-						and config.cooldown > 0
-						and game.seconds - lastTriggered < config.cooldown
-					then
-						return
-					end
-
-					local defID = data.defID
-					local unitDef = UnitDefs[defID]
-
-					if not (unitDef.customParams and unitDef.customParams.iscommander) then
-						return
-					end
-
-					notify({
-						team = team,
-						config = config,
-						templateParams = {
-							unitName = unitDef.name,
-						},
-					})
-
-					lastTriggered = game.seconds
-				end)
-			)
-
-			return unsubs
-		end,
-	},
-	{
-		id = "unit_got",
+		id = "unit_new",
 		description = "Watches for specific new units",
 		defaultConfig = {
 			category = "units",
@@ -300,6 +205,8 @@ return {
 			template = "You got a %{unitName}, current: +%{count}",
 			cooldown = 0,
 			parameters = {
+				startupDelay = 60,
+				commanders = false,
 				watchFor = {},
 			},
 		},
@@ -307,7 +214,7 @@ return {
 		Start = function(game, team, config, notify)
 			local unsubs = {}
 
-			local lastTriggered = 0
+			local lastTriggered = game.startupSeconds + config.parameters.startupDelay
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_got", "UnitFinished", function(data)
@@ -320,9 +227,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -352,8 +266,9 @@ return {
 			priority = constants.NOTIFY_PRIORITY.WARNING,
 			icon = "ℹ️",
 			template = "You lost a %{unitName}, current: +%{count}",
-			cooldown = 1,
+			cooldown = 0,
 			parameters = {
+				commanders = false,
 				watchFor = {},
 			},
 		},
@@ -361,7 +276,11 @@ return {
 		Start = function(game, team, config, notify)
 			local unsubs = {}
 
-			local lastTriggered = 0
+			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
+				return
+			end
+
+			local lastTriggered = game.startupSeconds
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_lost", "UnitDestroyed", function(data)
@@ -374,9 +293,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -399,6 +325,80 @@ return {
 		end,
 	},
 	{
+		id = "unit_lost_ping",
+		description = "Pings lost units",
+		defaultConfig = {
+			category = "units",
+			priority = constants.NOTIFY_PRIORITY.WARNING,
+			icon = "ℹ️",
+			template = "Lost %{unitName} here",
+			cooldown = 0,
+			forceChannels = { "ping" },
+			parameters = {
+				commanders = false,
+				watchFor = {},
+			},
+		},
+
+		Start = function(game, team, config, notify)
+			local unsubs = {}
+
+			if not config.parameters.commanders and table.count(config.parameters.watchFor) < 1 then
+				return
+			end
+
+			local lastTriggered = game.startupSeconds
+			table.insert(
+				unsubs,
+				team:Subscribe("unit_lost_ping", "UnitDestroyed", function(data)
+					if
+						lastTriggered > 0
+						and config.cooldown > 0
+						and game.seconds - lastTriggered < config.cooldown
+					then
+						return
+					end
+
+					local defID = data.defID
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
+
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
+						return
+					end
+
+					local x, y, z = spGetUnitPosition(data.id)
+					if not x or not y or not z then
+						return
+					end
+
+					notify({
+						team = team,
+						config = config,
+						templateParams = {
+							unitName = defName,
+						},
+						parameters = {
+							x = x,
+							y = y,
+							z = z,
+						},
+					})
+
+					lastTriggered = game.seconds
+				end)
+			)
+
+			return unsubs
+		end,
+	},
+	{
 		id = "unit_watch",
 		description = "Watches for specific units (combines unit_lost and unit_got)",
 		defaultConfig = {
@@ -408,6 +408,7 @@ return {
 			template = "You %{state} a %{unitName}, current: +%{count}",
 			cooldown = 1,
 			parameters = {
+				commanders = false,
 				watchFor = {},
 			},
 		},
@@ -415,7 +416,7 @@ return {
 		Start = function(game, team, config, notify)
 			local unsubs = {}
 
-			local lostLastTriggered = 0
+			local lostLastTriggered = game.startupSeconds
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_watch_lost", "UnitDestroyed", function(data)
@@ -428,9 +429,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -448,7 +456,7 @@ return {
 				end)
 			)
 
-			local addLastTriggered = 0
+			local addLastTriggered = game.startupSeconds
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_watch_got", "UnitFinished", function(data)
@@ -461,9 +469,16 @@ return {
 					end
 
 					local defID = data.defID
-					local defName = UnitDefs[defID].name
+					local unitDef = UnitDefs[defID]
+					local defName = unitDef.name
 
-					if not table.contains(config.parameters.watchFor, defName) then
+					local hasWatch = config.parameters.watchFor
+						and table.contains(config.parameters.watchFor, defName)
+					local isCom = config.parameters.commanders
+						and unitDef.customParams
+						and unitDef.customParams.iscommander
+
+					if not hasWatch and not isCom then
 						return
 					end
 
@@ -498,7 +513,7 @@ return {
 		Start = function(game, team, config, notify)
 			local unsubs = {}
 
-			local lastTriggered = 0
+			local lastTriggered = game.startupSeconds
 			table.insert(
 				unsubs,
 				team:Subscribe("unit_limit", "UnitFinished", function(data)
@@ -533,10 +548,10 @@ return {
 }
 end
 
--- module: channel.command  (from lua/channel/command.lua)
-__B_MODULES['channel.command'] = function(require)
+-- module: channels.command  (from lua/channels/command.lua)
+__B_MODULES['channels.command'] = function(require)
 local constants = require("core.constants")
-local cutils = require("channel.cutils")
+local cutils = require("channels.cutils")
 
 local spSendCommands = Spring.SendCommands
 
@@ -628,10 +643,10 @@ local channel = {
 return channel
 end
 
--- module: channel.console  (from lua/channel/console.lua)
-__B_MODULES['channel.console'] = function(require)
+-- module: channels.console  (from lua/channels/console.lua)
+__B_MODULES['channels.console'] = function(require)
 local constants = require("core.constants")
-local cutils = require("channel.cutils")
+local cutils = require("channels.cutils")
 
 local spEcho = Spring.Echo
 
@@ -711,8 +726,8 @@ local channel = {
 return channel
 end
 
--- module: channel.cutils  (from lua/channel/cutils.lua)
-__B_MODULES['channel.cutils'] = function(require)
+-- module: channels.cutils  (from lua/channels/cutils.lua)
+__B_MODULES['channels.cutils'] = function(require)
 local utils = require("core.utils")
 local constants = require("core.constants")
 local interpolate = require("i18n.interpolate")
@@ -723,6 +738,21 @@ cutils.ApplyDefaults = utils.ApplyDefaults
 
 ---@param n Notification
 ---@param NCID string
+---@return boolean
+function cutils.IsForcedChannel(n, NCID)
+	if not n.forceChannels then
+		return false
+	end
+
+	if table.contains(n.forceChannels, NCID) then
+		return true
+	end
+
+	return false
+end
+
+---@param n Notification
+---@param NCID string
 ---@param myConfig table
 ---@return boolean
 function cutils.ShouldSend(n, NCID, myConfig)
@@ -730,14 +760,17 @@ function cutils.ShouldSend(n, NCID, myConfig)
 		return false
 	end
 
-	if n.forceChannels then
-		if table.contains(n.forceChannels, NCID) then
-			return true
-		end
+	-- Send if forced.
+	if cutils.IsForcedChannel(n, NCID) then
+		return true
+	end
 
+	-- Do not send if forceChannels exists but we are not in.
+	if n.forceChannels then
 		return false
 	end
 
+	-- Check priority
 	if
 		(myConfig.minPriority > 0 and n.priority < myConfig.minPriority)
 		or (myConfig.maxPriority > 0 and n.priority > myConfig.maxPriority)
@@ -767,7 +800,13 @@ function cutils.DefaultNotificationParams(n, NCID, defaultParams)
 end
 
 function cutils.Interpolate(format, n)
+	if not format then
+		return "invalid empty format!"
+	end
+
 	return interpolate(format, {
+		playerName = n.team.leaderName,
+		teamId = n.team.id,
 		ruleId = n.config.id,
 		priorityName = constants.NOTIFY_PRIORITY_NAMES[n.priority],
 		message = n.message or "",
@@ -777,9 +816,9 @@ end
 return cutils
 end
 
--- module: channel.marquee  (from lua/channel/marquee.lua)
-__B_MODULES['channel.marquee'] = function(require)
-local cutils = require("channel.cutils")
+-- module: channels.marquee  (from lua/channels/marquee.lua)
+__B_MODULES['channels.marquee'] = function(require)
+local cutils = require("channels.cutils")
 local constants = require("core.constants")
 
 local CONFIG_CATEGORY = "channels"
@@ -791,7 +830,7 @@ local CONFIG_DEFAULTS = {
 	maxPriority = -1,
 	defaultParams = {
 		speed = 0.08,
-		duration = 8,
+		duration = 6,
 		fontSize = 32,
 		fontColor = { r = 1, g = 1, b = 0, a = 1 }, -- Yellow text.
 		fontOutlineColor = { r = 0, g = 0, b = 0, a = 1 },
@@ -874,9 +913,95 @@ local channel = {
 return channel
 end
 
--- module: channel.ui_log  (from lua/channel/ui_log.lua)
-__B_MODULES['channel.ui_log'] = function(require)
-local cutils = require("channel.cutils")
+-- module: channels.ping  (from lua/channels/ping.lua)
+__B_MODULES['channels.ping'] = function(require)
+local cutils = require("channels.cutils")
+
+local spMarkerAddPoint = Spring.MarkerAddPoint
+
+local CONFIG_CATEGORY = "channels"
+local NCID = "ping"
+
+local CONFIG_DEFAULTS = {
+	enabled = true,
+	format = "%{message}",
+	defaultParams = {
+		x = 0,
+		y = 0,
+		z = 0,
+	},
+}
+
+-- Vars
+--local logger ---@type Logger
+--local gameContext ---@type GameContext
+local config ---@type Config
+local myConfig = {} ---@type table<string, any>
+-- local ui ---@type OverwatchUi
+
+-- API
+---@type Channel
+local channel = {
+	id = NCID,
+	Init = function(l, g, c, _)
+		--logger = l:WithSection(l.section .. "::channel_" .. NCID)
+		--gameContext = g
+		config = c
+		-- ui = nui
+
+		-- Our own section in the config
+		if not config.data[CONFIG_CATEGORY] then
+			config.data[CONFIG_CATEGORY] = {}
+		end
+		if not config.data[CONFIG_CATEGORY][NCID] then
+			config.data[CONFIG_CATEGORY][NCID] = {}
+		end
+		myConfig = config.data[CONFIG_CATEGORY][NCID]
+
+		-- Apply defaults
+		cutils.ApplyDefaults(myConfig, CONFIG_DEFAULTS)
+
+		return true
+	end,
+	Shutdown = function()
+		return true
+	end,
+	GetControls = function()
+		---@type ChannelControls
+		return {
+			Enabled = function(state)
+				if state == nil then
+					return myConfig.enabled
+				end
+
+				myConfig.enabled = state
+				return state
+			end,
+		}
+	end,
+	GameFrame = function() end,
+	Notify = function(n)
+		if not cutils.IsForcedChannel(n, NCID) then
+			return true
+		end
+
+		if not n.parameters or not n.parameters.x or not n.parameters.y or not n.parameters.z then
+			return true
+		end
+
+		local m = cutils.Interpolate(myConfig.format, n)
+		spMarkerAddPoint(n.parameters.x, n.parameters.y, n.parameters.z, m, false)
+
+		return true
+	end,
+}
+
+return channel
+end
+
+-- module: channels.ui_log  (from lua/channels/ui_log.lua)
+__B_MODULES['channels.ui_log'] = function(require)
+local cutils = require("channels.cutils")
 local constants = require("core.constants")
 
 local CONFIG_CATEGORY = "channels"
@@ -956,6 +1081,8 @@ end
 
 -- module: core.config  (from lua/core/config.lua)
 __B_MODULES['core.config'] = function(require)
+local utils = require("core.utils")
+
 -- Configuration helper and store.
 --
 ---@class Config
@@ -968,10 +1095,10 @@ Config.__index = Config
 ---@return Config
 function Config.New(logger)
 	---@type Config
-	local self = setmetatable({}, Config)
-
-	self.data = {}
-	self._logger = logger
+	local self = setmetatable(
+		{ data = {}, _logger = logger:WithSection(logger.section .. "::config") },
+		Config
+	)
 
 	return self
 end
@@ -984,6 +1111,8 @@ end
 ---@param defaultConfig table? Default configuration if no config has been found
 ---@return boolean success Whether loading was successful
 function Config:Load(path, defaultConfig)
+	self._logger:Debug("Loading")
+
 	if not VFS.FileExists(path) then
 		if defaultConfig then
 			self._logger:Info("Config not found, will create on first save")
@@ -1000,9 +1129,13 @@ function Config:Load(path, defaultConfig)
 		return false
 	end
 
+	if defaultConfig then
+		utils.ApplyDefaults(result, defaultConfig)
+	end
+
 	self.data = result
 
-	self._logger:Debug("Loaded config successfully")
+	utils.self._logger:Debug("Loaded config successfully")
 	return true
 end
 
@@ -1030,6 +1163,8 @@ end
 function Config:LoadMany(dir, pattern, last, defaultConfig)
 	local cFiles = VFS.DirList(dir, pattern)
 
+	self._logger:Debug("Loading")
+
 	if #cFiles == 0 then
 		if defaultConfig then
 			self._logger:Info("Config not found, will create on first save")
@@ -1049,6 +1184,7 @@ function Config:LoadMany(dir, pattern, last, defaultConfig)
 	for _, p in ipairs(cFiles) do
 		local filename = p:match("([^/]+)$")
 		if filename ~= last then
+			self._logger:Trace("Loading config %s", p)
 			self.data = loadOne(p, self.data)
 		else
 			lastPath = p
@@ -1056,7 +1192,12 @@ function Config:LoadMany(dir, pattern, last, defaultConfig)
 	end
 
 	if #lastPath > 0 then
+		self._logger:Trace("Loading last config %s", lastPath)
 		self.data = loadOne(lastPath, self.data)
+	end
+
+	if defaultConfig then
+		utils.ApplyDefaults(self.data, defaultConfig)
 	end
 
 	return true
@@ -1190,6 +1331,7 @@ local spGetGameRulesParam = Spring.GetGameRulesParam
 ---@field maxUnitsPerPlayer integer
 ---@field frame number Current game frame
 ---@field time number Current game time
+---@field startupSeconds number Game time at startup
 ---@field seconds number Current game time in seconds
 ---@field pveMode string The PVE mode, currently one of: "raptors", "scavengers", or "none"
 ---@field bossAnger number Queen/Boss anger level (0-100)
@@ -1218,6 +1360,7 @@ function GameContext.New(cleanUpInterval, logger)
 		modOptions = Spring.GetModOptions(),
 		maxUnits = Game.maxUnits,
 		frame = 0,
+		startupSeconds = spGetGameSeconds() or 0,
 		seconds = 0,
 		bossAnger = 0,
 		bossHealth = 0,
@@ -1234,10 +1377,13 @@ function GameContext.New(cleanUpInterval, logger)
 	}, GameContext)
 
 	-- Do not cleanup on start / recreation of widget
-	local seconds = spGetGameSeconds() or 0
-	self._lastCleanup = seconds + cleanUpInterval
+	self._lastCleanup = self.startupSeconds + cleanUpInterval
 
 	return self
+end
+
+function GameContext:Shutdown()
+	self._subscribers = {}
 end
 
 ---@return string
@@ -1472,17 +1618,19 @@ local levelNames = {
 ---@param level MyLogLevel
 ---@return string
 local function levelName(level)
+	-- Direct mapping
+	if levelNames[level] then
+		return levelNames[level]
+	end
+
+	-- Overflow.
 	if level <= LogLevel.ALL then
 		return "ALL"
 	elseif level >= LogLevel.NONE then
 		return "NONE"
 	end
 
-	-- Direct mapping
-	if levelNames[level] then
-		return levelNames[level]
-	end
-
+	-- Inbetween.
 	if level > LogLevel.FATAL then
 		return "FATAL+" .. (level - LogLevel.FATAL)
 	end
@@ -1697,6 +1845,14 @@ function TeamContext.New(id, logger)
 	return self
 end
 
+function TeamContext:Shutdown()
+	for _, r in pairs(self._resources) do
+		r:Shutdown()
+	end
+
+	self._subscribers = {}
+end
+
 ---@return string
 function TeamContext:__tostring()
 	return utils.DumpClass(
@@ -1753,6 +1909,13 @@ function TeamContext:Subscribe(caller, topic, callback)
 
 		table.removeAll(self._subscribers[topic], callback)
 	end
+end
+
+-- IsReal checks if the current team is real.
+--.
+---@return boolean
+function TeamContext:IsReal()
+	return utils.IsTeamReal(self.allyTeamId)
 end
 
 function TeamContext:updateUnitCount()
@@ -1939,6 +2102,10 @@ function TeamResource.New(team, resourceType, logger)
 	return self
 end
 
+function TeamResource:Shutdown()
+	self._subscribers = {}
+end
+
 ---@return string
 function TeamResource:__tostring()
 	return utils.DumpClass(self, "TeamResource", {
@@ -2090,7 +2257,10 @@ end
 
 -- module: core.utils  (from lua/core/utils.lua)
 __B_MODULES['core.utils'] = function(require)
--- Result
+local spGetTeamList = Spring.GetTeamList
+local spGetTeamInfo = Spring.GetTeamInfo
+local spGetPlayerInfo = Spring.GetPlayerInfo
+
 local utils = {}
 
 -- Transfrom the given class with name and provided field list into:
@@ -2141,11 +2311,12 @@ function utils.ApplyDefaults(target, defaults)
 
 	for k, v in pairs(defaults) do
 		local vt = type(v)
+		local tt = type(target[k])
 
 		if target[k] == nil then
 			-- Apply default if key doesn't exist in target
 			target[k] = v
-		elseif vt == "table" and type(target[k]) == "table" then
+		elseif vt == "table" and tt == "table" then
 			-- If both are tables, recursively apply defaults
 			utils.ApplyDefaults(target[k], v)
 		end
@@ -2185,7 +2356,7 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 		for k, v in pairs(reqs) do
 			if type(validate[k]) == v then
 				if type(target[k]) == "table" then
-					utils.ApplyDefaults(target[k], validate[k])
+					target[k] = table.merge(target[k], validate[k])
 				else
 					target[k] = validate[k]
 				end
@@ -2198,7 +2369,7 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 		for k, v in pairs(opts) do
 			if type(validate[k]) == v then
 				if type(target[k]) == "table" then
-					utils.ApplyDefaults(target[k], validate[k])
+					target[k] = table.merge(target[k], validate[k])
 				else
 					target[k] = validate[k]
 				end
@@ -2210,6 +2381,32 @@ function utils.MergeValidate(target, validate, reqs, opts, defaults)
 	return nil
 end
 
+-- IsTeamReal checks if the given ally team id is a real team.
+--
+---@param allyTeamId number The ally team to query.
+function utils.IsTeamReal(allyTeamId)
+	if allyTeamId == nil then
+		return false
+	end
+	local leaderID, isDead, leaderName
+	local tids = spGetTeamList(allyTeamId)
+	if not tids then
+		return false
+	end
+
+	for _, tID in ipairs(tids) do
+		_, leaderID, isDead = spGetTeamInfo(tID, false)
+		leaderName = (
+			(WG and WG.playernames and WG.playernames.getPlayername)
+			and WG.playernames.getPlayername(leaderID)
+		) or spGetPlayerInfo(leaderID, false)
+		if leaderName ~= nil or isDead then
+			return true
+		end
+	end
+	return false
+end
+
 return utils
 end
 
@@ -2218,38 +2415,6 @@ __B_MODULES['default_config'] = function(require)
 ---@type ConfigFormat
 return {
 	rules = {
-		commander_lost = {
-			enabled = true,
-			blueprint = "commander_lost",
-			parameters = {
-				channels = {
-					marquee = {
-						fontColor = {
-							a = 1,
-							b = 0,
-							g = 0,
-							r = 1,
-						},
-					},
-				},
-			},
-		},
-		commander_new = {
-			enabled = true,
-			blueprint = "commander_new",
-			parameters = {
-				channels = {
-					marquee = {
-						fontColor = {
-							a = 1,
-							b = 0,
-							g = 0,
-							r = 1,
-						},
-					},
-				},
-			},
-		},
 		resource_stale = {
 			enabled = true,
 			blueprint = "resource_stale",
@@ -2259,7 +2424,7 @@ return {
 			},
 		},
 		resource_stale_say = {
-			enabled = true,
+			enabled = false,
 			blueprint = "resource_stale",
 			template = "I'm staling %{kind} (auto-message)",
 			forceChannels = {
@@ -2292,7 +2457,7 @@ return {
 			},
 		},
 		resource_waste_say = {
-			enabled = true,
+			enabled = false,
 			blueprint = "resource_waste",
 			template = "I'm excessing %{excess} of %{kind} (auto-message)",
 			forceChannels = {
@@ -2306,6 +2471,20 @@ return {
 		resource_converter_level = {
 			enabled = true,
 			blueprint = "resource_converter_level",
+		},
+		unit_lost = {
+			enabled = true,
+			blueprint = "unit_lost",
+			parameters = {
+				commanders = true,
+			},
+		},
+		unit_lost_ping = {
+			enabled = true,
+			blueprint = "unit_lost_ping",
+			parameters = {
+				commanders = true,
+			},
 		},
 	},
 }
@@ -2454,14 +2633,14 @@ local DEFAULT_BG_COLOR = "#4a4a4a00"
 local CONFIG_SECTION = "rmlUi"
 local CONFIG_DEFAULTS = {
 	show = true,
-	autoSave = IS_RELEASE,
+	autoSave = false,
 	teamColoring = true,
 	prioColoring = true,
 
 	panel = {
 		height = "261px",
-		left = "1595px",
-		top = "1122px",
+		left = "1545px",
+		top = "1120px",
 		width = "606px",
 	},
 
@@ -2477,7 +2656,7 @@ local CONFIG_DEFAULTS = {
 		message = { visible = true },
 	},
 
-	marqueeDuration = 0.8,
+	logMax = IS_RELEASE and 100 or 500,
 }
 
 local MARQUEE_NCID = "marquee"
@@ -2529,10 +2708,6 @@ local function rgbaToHex(r, g, b, a)
 end
 
 local function saveConfig()
-	if not uiConfig.autoSave then
-		return
-	end
-
 	if IS_RELEASE then
 		config:Save(
 			constants.CONFIG_DIR .. constants.CONFIG_FILE,
@@ -2553,6 +2728,7 @@ end
 ---@field headerName string
 ---@field panelMode string
 ---@field panel table
+---@field autoSave boolean
 ---@field showButtons boolean
 ---@field columns any
 ---@field numColumns integer
@@ -2564,9 +2740,13 @@ local initModel = {
 	debugging = false,
 
 	panelMode = "log",
-	panel = {},
 
+	-- start: Overwritten by config.
+	panel = {},
+	autoSave = IS_RELEASE,
 	showButtons = true,
+	logMax = 100,
+	-- end
 
 	columns = {
 		[1] = { label = "Time", width = "3.5rem", visible = true, teamColor = false },
@@ -2581,7 +2761,6 @@ local initModel = {
 
 	logs = {},
 	logCount = 0,
-	logMax = IS_RELEASE and 1000 or 10000,
 }
 local rmlContext ---@type RmlUi.Context?
 local dmHandle ---@type RmlUi.SolLuaDataModel<OverwatchUiModel>?
@@ -2647,14 +2826,15 @@ local function drawMarqueeMessage()
 	local currentTimer = spGetTimer()
 	local elapsed = spDiffTimers(currentTimer, marqueeStartTime)
 
+	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
+
 	-- Check if message should be dismissed.
-	if elapsed > uiConfig.marqueeDuration then
+	if elapsed > params.duration then
 		marqueeMessage = nil
 		marqueeStartTime = nil
 		return
 	end
 
-	local params = marqueeMessage.config.parameters["channels"][MARQUEE_NCID]
 	local fc = params.fontColor
 	local foc = params.fontOutlineColor
 
@@ -2725,6 +2905,8 @@ local ui = {
 		-- Copy users panel config into the data model.
 		initModel.panel = table.copy(uiConfig.panel)
 		initModel.showButtons = uiConfig.showButtons
+		initModel.autoSave = uiConfig.autoSave
+		initModel.logMax = uiConfig.logMax
 
 		initModel.columns[1].visible = uiConfig.columns.time.visible
 		initModel.columns[2].visible = uiConfig.columns.playerName.visible
@@ -2773,7 +2955,7 @@ local ui = {
 			return false
 		end
 
-		local remember = { "left", "top", "width", "hight" }
+		local remember = { "left", "top", "width", "height" }
 		widget:AddEventListener("blur", function()
 			if not uiConfig["panel"] then
 				uiConfig["panel"] = {}
@@ -2789,7 +2971,7 @@ local ui = {
 				end
 			end
 
-			if dirty then
+			if dirty and uiConfig.autoSave then
 				saveConfig()
 			end
 		end, true)
@@ -2820,6 +3002,10 @@ local ui = {
 		rmlContext = nil
 
 		return true
+	end,
+
+	Save = function()
+		saveConfig()
 	end,
 
 	SetTeamContext = function(team)
@@ -2888,14 +3074,10 @@ local ui = {
 	Marquee = function(n)
 		if marqueeMessage or marqueeStartTime or not font2 then
 			if logger.level >= LogLevel.TRACE2 then
-				logger:Trace2("Marquee message: %s", n.message)
+				logger:Trace2("Not sending marquee message: %s", n.message)
 			end
 
 			return
-		end
-
-		if logger.level >= LogLevel.TRACE then
-			logger:Trace("Marquee message: %s", n.message)
 		end
 
 		marqueeMessage = n
@@ -2929,7 +3111,9 @@ local ui = {
 			end
 
 			-- Save
-			saveConfig()
+			if uiConfig.autoSave then
+				saveConfig()
+			end
 		end
 
 		return false
@@ -2994,6 +3178,10 @@ end
 
 function controls.SetDmHandle(h)
 	dmHandle = h
+end
+
+function controls:Save()
+	ui.Save()
 end
 
 function controls:Reload()
@@ -3172,9 +3360,7 @@ h1 {
 
 .logs .log-buttons {
     display: inline;
-    position: relative;
-    right: 0;
-    top: 0;
+    float: right;
 }
 
 .logs .form-button {
@@ -3311,17 +3497,6 @@ sliderarrowdec:hover
 {
 	background-color: rgb(150,150,150);
 }
-
-
-
-
-
-
-
-
-
-
-
 ]]
 end
 
@@ -3344,12 +3519,15 @@ return [[
 
         <div class="header">
             <h1>Overwatch</h1>
-            <button class="button"
-                    data-if="panelMode == 'settings'"
-                    onclick="widget:SetPanelMode('log')">Log</button>
-            <button class="button"
-                    data-if="panelMode == 'log'"
-                    onclick="widget:SetPanelMode('settings')">Settings</button>
+            <div>
+                <button class="button" onclick="widget:Save()" data-if="autoSave != true">Save</button>
+                <button class="button"
+                        data-if="panelMode == 'settings'"
+                        onclick="widget:SetPanelMode('log')">Log</button>
+                <button class="button"
+                        data-if="panelMode == 'log'"
+                        onclick="widget:SetPanelMode('settings')">Settings</button>
+            </div>
         </div>
 
         <div class="log-container" data-if="panelMode == 'log'">
@@ -3438,10 +3616,11 @@ local ui = require("ui.rml_ui")
 
 ---@type Channel[]
 local channels = {
-	require("channel.command"),
-	require("channel.console"),
-	require("channel.ui_log"),
-	require("channel.marquee"),
+	require("channels.command"),
+	require("channels.console"),
+	require("channels.ui_log"),
+	require("channels.marquee"),
+	require("channels.ping"),
 }
 
 ---@type Blueprint[]
@@ -3468,7 +3647,7 @@ local CONFIG_RULE_REQS = { id = "string", enabled = "boolean" } -- 'blueprint = 
 -- Per rule optional fields
 local CONFIG_RULE_OPTS = {
 	enabled = "boolean",
-	currentTeam = "boolean",
+	ownTeam = "boolean",
 	interval = "number",
 	cooldown = "number",
 	category = "string",
@@ -3487,8 +3666,6 @@ local CONFIG_RULE_DEFAULTS = {
 
 -- Forward declarations
 local spGetTeamList = Spring.GetTeamList
-local spGetTeamInfo = Spring.GetTeamInfo
-local spGetPlayerInfo = Spring.GetPlayerInfo
 
 -- Vars
 local initialized = false
@@ -3531,36 +3708,13 @@ local function hasMinLogLevel(level)
 	return LOG_LEVEL <= level
 end
 
-local function isTeamReal(allyTeamId)
-	if allyTeamId == nil then
-		return false
-	end
-	local leaderID, isDead, leaderName
-	local tids = spGetTeamList(allyTeamId)
-	if not tids then
-		return false
-	end
-
-	for _, tID in ipairs(tids) do
-		_, leaderID, isDead = spGetTeamInfo(tID, false)
-		leaderName = (
-			(WG and WG.playernames and WG.playernames.getPlayername)
-			and WG.playernames.getPlayername(leaderID)
-		) or spGetPlayerInfo(leaderID, false)
-		if leaderName ~= nil or isDead then
-			return true
-		end
-	end
-	return false
-end
-
 ---@return number[]
 local function getTeamlist()
 	local r = {}
 	local t = spGetTeamList()
 	for _, teamId in ipairs(t) do
 		local allyId = select(6, Spring.GetTeamInfo(teamId))
-		if isTeamReal(allyId) then
+		if utils.IsTeamReal(allyId) then
 			table.insert(r, teamId)
 		end
 	end
@@ -3767,6 +3921,32 @@ local function loadBlueprints(env)
 	return bpLoaded
 end
 
+---@param team TeamContext
+local function cleanupTeam(team)
+	if not team then
+		return
+	end
+
+	local id = team.id
+
+	-- Stop all rules listening.
+	if ruleStoppers[id] then
+		for _, trs in pairs(ruleStoppers[id]) do
+			for _, rs in pairs(trs) do
+				rs()
+			end
+		end
+		ruleStoppers[id] = nil
+	end
+
+	-- Cleanup states
+	ruleStates[id] = nil
+
+	-- Stop contexts
+	team:Shutdown()
+	teamContexts[id] = nil
+end
+
 ---@param msg string
 local function fatalRemoveMe(msg, ...)
 	logger:Fatal(msg, ...)
@@ -3867,7 +4047,7 @@ function widget:Initialize()
 			-- Start the rule for all teams
 			if rconf.enabled and rule.bp.Start then
 				for _, team in pairs(teamContexts) do
-					if not rconf.currentTeam or team.id == myTeamID then
+					if not rconf.ownTeam or team.id == myTeamID then
 						if not ruleStoppers[team.id] then
 							ruleStoppers[team.id] = {}
 						end
@@ -3915,6 +4095,12 @@ end
 function widget:Shutdown()
 	ui.Shutdown()
 
+	for _, team in pairs(teamContexts) do
+		cleanupTeam(team)
+	end
+
+	gameContext:Shutdown()
+
 	initialized = false
 end
 
@@ -3926,12 +4112,22 @@ function widget:GameFrame(n)
 	-- Update game context
 	gameContext:GameFrame()
 
-	local myTeamID = gameContext.myTeamID
+	-- Cleanup teamcontexts
+	for _, team in pairs(teamContexts) do
+		if team then
+			if not team:IsReal() then
+				logger:Debug("Removing team %d it's not real anymore", team.id)
+
+				cleanupTeam(team)
+			end
+		end
+	end
 
 	-- Process all rules for all teams
-	for teamID, teamContext in pairs(teamContexts) do
+	local myTeamID = gameContext.myTeamID
+	for id, team in pairs(teamContexts) do
 		-- Update team context
-		teamContext:GameFrame()
+		team:GameFrame()
 
 		-- Process each rule instance
 		for _, ruleInstance in ipairs(rules) do
@@ -3939,9 +4135,9 @@ function widget:GameFrame(n)
 			if
 				ruleInstance.bp.Trigger
 				and rconf.enabled
-				and (not rconf.currentTeam or teamID == myTeamID)
+				and (not rconf.ownTeam or id == myTeamID)
 			then
-				triggerRule(ruleInstance, teamID)
+				triggerRule(ruleInstance, id)
 			end
 		end
 	end

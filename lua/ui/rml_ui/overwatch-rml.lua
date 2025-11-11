@@ -38,12 +38,12 @@ return [[
                                     <form onsubmit="widget:Say(event, true)">
                                         <input type="text" name="player" data-value="log[1].value" style="display: none" />
                                         <input type="text" name="message" data-value="log[6].value" style="display: none" />
-                                        <input type="submit" class="form-button">Global</input>
+                                        <input type="submit" class="form-button">G</input>
                                     </form>
                                     <form onsubmit="widget:Say(event, false)" data-if="it_index + 1 == numColumns">
                                         <input type="text" name="player" data-value="log[1].value" style="display: none" />
                                         <input type="text" name="message" data-value="log[6].value" style="display: none" />
-                                        <input type="submit" class="form-button">Team</input>
+                                        <input type="submit" class="form-button">T</input>
                                     </form>
                                 </div>
                             </td>
@@ -66,10 +66,6 @@ return [[
     <handle size_target="overwatch-widget" class="size_handle cursor-move">&nbsp;</handle>
 </body>
 </rml>
-
-
-
-
 
 
 

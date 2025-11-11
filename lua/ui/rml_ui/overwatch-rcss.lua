@@ -115,8 +115,7 @@ h1 {
 
 .logs .log-buttons {
     display: inline;
-    position: absolute;
-    right: 24dp;
+    float: right;
 }
 
 .logs .form-button {

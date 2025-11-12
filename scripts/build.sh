@@ -1,93 +1,121 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # Build script configuration
 SRC_DIR="lua"
 OUTPUT_DIR="dist"
 DEBUG_OUTPUT="${OUTPUT_DIR}/debug/overwatch.lua"
 RELEASE_OUTPUT="${OUTPUT_DIR}/overwatch.lua"
+BAR_REPO=$(realpath "${SCRIPT_DIR}/../../Beyond-All-Reason")
 
-function build_lua_rml() {
+build_lua_rml() {
   echo "Creating -rml.lua and -rcss.lua files..."
-  for f in $(find ${SRC_DIR}/ -name '*rml'); do
-    local nf="${f%.rml}-rml.lua"
-    echo -e "-- AUTO Generated: DO NOT EDIT\nreturn [[" > $nf
-    cat $f >> $nf
-    echo "" >> $nf
-    echo "]]" >> $nf
-  done
-
-  for f in $(find ${SRC_DIR}/ -name '*rcss'); do
-    local nf="${f%.rcss}-rcss.lua"
-    echo -e "-- AUTO Generated: DO NOT EDIT\nreturn [[" > $nf
-    cat $f >> $nf
-    echo "" >> $nf
-    echo "]]" >> $nf
-  done
-
+  while IFS= read -r -d '' file
+  do
+    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" > "${file%.rml}-rml.lua"
+  done <   <(find "${SRC_DIR}" -name '*.rml' -print0)
+  
+  while IFS= read -r -d '' file
+  do
+    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" > "${file%.rcss}-rcss.lua"
+  done <   <(find "${SRC_DIR}" -name '*.rcss' -print0)
   echo "Done"
 }
 
-# Build functions
-function build_debug() {
+build() {
+  local flavor=$1
+
   build_lua_rml
 
-  echo "Building debug version..."
-  luapack bundle lua/main.lua --output="${DEBUG_OUTPUT}"
-  echo "Debug build complete: ${DEBUG_OUTPUT}"
+  if [ "${flavor}" == "release" ]; then
+    echo "Building release version..."
+    # Temporarily change to release mode
+    sed -i 's/^local IS_RELEASE = false$/local IS_RELEASE = true/' "${SRC_DIR}/core/constants.lua"
+
+    # Build release version
+    luapack bundle lua/main.lua --output="${RELEASE_OUTPUT}" 2>&1
+
+    # Revert back to debug mode
+    sed -i 's/^local IS_RELEASE = true$/local IS_RELEASE = false/' "${SRC_DIR}/core/constants.lua"
+
+    echo "Release build complete: ${RELEASE_OUTPUT}"
+  else
+    echo "Building debug version..."
+    luapack bundle lua/main.lua --output="${DEBUG_OUTPUT}" 2>&1
+    echo "Debug build complete: ${DEBUG_OUTPUT}"
+  fi
 }
 
-function build_release() {
-  build_lua_rml
+watch() {
+  local flavor=$1
 
-  echo "Building release version..."
-  # Temporarily change to release mode
-  sed -i 's/^local IS_RELEASE = false$/local IS_RELEASE = true/' "${SRC_DIR}/core/constants.lua"
-
-  # Build release version
-  luapack bundle lua/main.lua --output="${RELEASE_OUTPUT}"
-
-  # Revert back to debug mode
-  sed -i 's/^local IS_RELEASE = true$/local IS_RELEASE = false/' "${SRC_DIR}/core/constants.lua"
-
-  echo "Release build complete: ${RELEASE_OUTPUT}"
-}
-
-function watch_mode_debug() {
   echo "Starting watch mode. Press Ctrl+C to exit."
 
   # Build once initially
-  build_debug
+  build "${flavor}"
 
   # Then watch for changes
   echo "Watching for changes in ${SRC_DIR}..."
   while inotifywait -e close_write -r "${SRC_DIR}"; do
     echo "Changes detected, rebuilding..."
-    build_debug || continue
+    build "${flavor}" || continue
   done
 }
 
-function watch_mode_release() {
-  echo "Starting watch mode. Press Ctrl+C to exit."
+test() {
+    local flavor=$1
 
-  # Build once initially
-  build_release
+    local build=""
+    if [ "${flavor}" == "release" ]; then
+      build="${RELEASE_OUTPUT}"
+    else
+      build="${DEBUG_OUTPUT}"
+    fi
 
-  # Then watch for changes
-  echo "Watching for changes in ${SRC_DIR}..."
-  while inotifywait -e close_write -r "${SRC_DIR}"; do
-    echo "Changes detected, rebuilding..."
-    build_release || continue
-  done
+    source "${SCRIPT_DIR}/recoil.sh"
+
+    # shellcheck disable=SC2034
+    ENABLE_WIDGETS='"Overwatch"'
+
+    local work_dir
+    mkdir -p "${SCRIPT_DIR}/../test/local-bar"
+    work_dir=$(realpath "${SCRIPT_DIR}/../test/local-bar")
+
+    local luaui_dir="${work_dir}/LuaUI/Widgets"
+    mkdir -p "${luaui_dir}"
+    cp -f "${build}" "${luaui_dir}/"
+
+
+    # Run spring-headless
+    local output
+    # recoil_enable_log
+    output=$(recoil_run "headless" "${work_dir}" "${BAR_REPO}" "master" "" "${RECOIL_DEFAULT_MAP_URL}" "${RECOIL_DEFAULT_SETTINGS}" "${RECOIL_DEFAULT_ARGS}" true)
+    local rc=$?
+
+    # Check for widget stuff
+    local has_check_error=false
+    if ! printf "%s" "${output}" | grep "Overwatch" 1>/dev/null; then
+      printf "ERROR: \"Overwatch\" not found in test output\n" > /dev/stderr
+      has_check_error=true
+    fi
+
+    if [ "${has_check_error}" == true ]; then
+      printf "%s\n" "${output}"
+      rc=1
+    fi
+
+    return ${rc}
 }
 
 # Git commit functions
-function show_status() {
+show_status() {
   echo "Current Git Status:"
   git status -s
   echo ""
 }
 
-function commit_changes() {
+commit_changes() {
   local message="$1"
 
   if [ -z "$message" ]; then
@@ -99,9 +127,7 @@ function commit_changes() {
   git add -A
 
   # Commit with the provided message
-  git commit -m "$message"
-
-  if [ $? -eq 0 ]; then
+  if git commit -m "$message"; then
     echo "Successfully committed changes with message: $message"
     return 0
   else
@@ -110,21 +136,19 @@ function commit_changes() {
   fi
 }
 
-function commit_workflow() {
+commit() {
   # Show current status
   show_status
 
   # Ask if user wants to commit
-  read -p "Do you want to commit the current changes? (y/n): " commit_choice
+  read -r -p "Do you want to commit the current changes? (y/n): " commit_choice
 
   if [[ $commit_choice =~ ^[Yy]$ ]]; then
     # Ask for commit message
-    read -p "Enter commit message: " commit_message
+    read -r -p "Enter commit message: " commit_message
 
-    # Commit changes
-    commit_changes "$commit_message"
-
-    if [ $? -eq 0 ]; then
+    # Commit changes    
+    if commit_changes "$commit_message"; then
       echo "Ready to apply new changes!"
     else
       echo "Commit failed. Please resolve issues before proceeding."
@@ -135,36 +159,53 @@ function commit_workflow() {
   fi
 }
 
-# Parse command line arguments
-COMMAND="all"
-if [ $# -gt 0 ]; then
-  COMMAND=$1
-fi
+main() {
+  # Execute requested command
+  case "${1:-"build-test"}" in
+    "debug")
+      build "debug"
+      ;;
+    "release")
+      build "release"
+      ;;
+    "watch")
+      watch "debug"
+      ;;
+    "watch-release")
+      watch "release"
+      ;;
+    "commit")
+      commit
+      ;;
+    "build")
+      build "debug"
+      build "release"
+      ;;
+    "build-test")
+      build "debug"
+      if ! test "debug"; then
+        exit 1
+      fi
 
-# Execute requested command
-case "${COMMAND}" in
-  "debug")
-    build_debug
-    ;;
-  "release")
-    build_release
-    ;;
-  "watch")
-    watch_mode_debug
-    ;;
-  "watch-release")
-    watch_mode_release
-    ;;
-  "commit")
-    commit_workflow
-    ;;
-  "build-commit")
-    build_debug
-    build_release
-    commit_workflow
-    ;;
-  "build" | *)
-    build_debug
-    build_release
-    ;;
-esac
+      build "release"
+      if ! test "relase"; then
+        exit 1
+      fi
+      ;;
+    "build-test-commit")
+      build "debug"
+      if ! test "debug"; then
+        exit 1
+      fi
+
+      build "release"
+      if ! test "relase"; then
+        exit 1
+      fi
+
+      commit
+      ;;
+  esac
+}
+
+main "${@}"

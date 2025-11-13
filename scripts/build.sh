@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 # Build script configuration
 SRC_DIR="lua"
@@ -11,15 +11,13 @@ BAR_REPO=$(realpath "${SCRIPT_DIR}/../../Beyond-All-Reason")
 
 build_lua_rml() {
   echo "Creating -rml.lua and -rcss.lua files..."
-  while IFS= read -r -d '' file
-  do
-    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" > "${file%.rml}-rml.lua"
-  done <   <(find "${SRC_DIR}" -name '*.rml' -print0)
-  
-  while IFS= read -r -d '' file
-  do
-    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" > "${file%.rcss}-rcss.lua"
-  done <   <(find "${SRC_DIR}" -name '*.rcss' -print0)
+  while IFS= read -r -d '' file; do
+    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" >"${file%.rml}-rml.lua"
+  done < <(find "${SRC_DIR}" -name '*.rml' -print0)
+
+  while IFS= read -r -d '' file; do
+    printf -- "-- AUTO Generated: DO NOT EDIT\nreturn [[%s\n]]\n" "$(cat "${file}")" >"${file%.rcss}-rcss.lua"
+  done < <(find "${SRC_DIR}" -name '*.rcss' -print0)
   echo "Done"
 }
 
@@ -64,48 +62,47 @@ watch() {
 }
 
 test() {
-    local flavor=$1
+  local flavor=$1
 
-    local build=""
-    if [ "${flavor}" == "release" ]; then
-      build="${RELEASE_OUTPUT}"
-    else
-      build="${DEBUG_OUTPUT}"
-    fi
+  local build=""
+  if [ "${flavor}" == "release" ]; then
+    build="${RELEASE_OUTPUT}"
+  else
+    build="${DEBUG_OUTPUT}"
+  fi
 
-    source "${SCRIPT_DIR}/recoil.sh"
+  source "${SCRIPT_DIR}/recoil.sh"
 
-    # shellcheck disable=SC2034
-    ENABLE_WIDGETS='"Overwatch"'
+  # shellcheck disable=SC2034
+  ENABLE_WIDGETS='"Overwatch"'
 
-    local work_dir
-    mkdir -p "${SCRIPT_DIR}/../test/local-bar"
-    work_dir=$(realpath "${SCRIPT_DIR}/../test/local-bar")
+  local work_dir
+  mkdir -p "${SCRIPT_DIR}/../test/overwatch-bar"
+  work_dir=$(realpath "${SCRIPT_DIR}/../test/overwatch-bar")
 
-    local luaui_dir="${work_dir}/LuaUI/Widgets"
-    mkdir -p "${luaui_dir}"
-    cp -f "${build}" "${luaui_dir}/"
+  local luaui_dir="${work_dir}/LuaUI/Widgets"
+  mkdir -p "${luaui_dir}"
+  cp -f "${build}" "${luaui_dir}/"
 
+  # Run spring-headless
+  local output
+  # recoil_enable_log
+  output=$(recoil_run "headless" "${work_dir}" "${BAR_REPO}" "master" "" "${RECOIL_DEFAULT_MAP_URL}" "${RECOIL_DEFAULT_GAME}" "${RECOIL_DEFAULT_MAP}" "" true | tee -a -i /dev/tty)
+  local rc=$?
 
-    # Run spring-headless
-    local output
-    # recoil_enable_log
-    output=$(recoil_run "headless" "${work_dir}" "${BAR_REPO}" "master" "" "${RECOIL_DEFAULT_MAP_URL}" "${RECOIL_DEFAULT_SETTINGS}" "${RECOIL_DEFAULT_ARGS}" true)
-    local rc=$?
+  # Check for widget stuff
+  local has_check_error=false
+  if ! printf "%s" "${output}" | grep "Overwatch" 1>/dev/null; then
+    recoil_log_error_buff "\"Overwatch\" not found in test output"
+    has_check_error=true
+  fi
 
-    # Check for widget stuff
-    local has_check_error=false
-    if ! printf "%s" "${output}" | grep "Overwatch" 1>/dev/null; then
-      printf "ERROR: \"Overwatch\" not found in test output\n" > /dev/stderr
-      has_check_error=true
-    fi
+  if [ "${has_check_error}" == true ]; then
+    recoil_print_error_buff
+    rc=1
+  fi
 
-    if [ "${has_check_error}" == true ]; then
-      printf "%s\n" "${output}"
-      rc=1
-    fi
-
-    return ${rc}
+  return ${rc}
 }
 
 # Git commit functions
@@ -147,7 +144,7 @@ commit() {
     # Ask for commit message
     read -r -p "Enter commit message: " commit_message
 
-    # Commit changes    
+    # Commit changes
     if commit_changes "$commit_message"; then
       echo "Ready to apply new changes!"
     else
@@ -162,49 +159,49 @@ commit() {
 main() {
   # Execute requested command
   case "${1:-"build-test"}" in
-    "debug")
-      build "debug"
-      ;;
-    "release")
-      build "release"
-      ;;
-    "watch")
-      watch "debug"
-      ;;
-    "watch-release")
-      watch "release"
-      ;;
-    "commit")
-      commit
-      ;;
-    "build")
-      build "debug"
-      build "release"
-      ;;
-    "build-test")
-      build "debug"
-      if ! test "debug"; then
-        exit 1
-      fi
+  "debug")
+    build "debug"
+    ;;
+  "release")
+    build "release"
+    ;;
+  "watch")
+    watch "debug"
+    ;;
+  "watch-release")
+    watch "release"
+    ;;
+  "commit")
+    commit
+    ;;
+  "build")
+    build "debug"
+    build "release"
+    ;;
+  "build-test")
+    build "debug"
+    if ! test "debug"; then
+      exit 1
+    fi
 
-      build "release"
-      if ! test "relase"; then
-        exit 1
-      fi
-      ;;
-    "build-test-commit")
-      build "debug"
-      if ! test "debug"; then
-        exit 1
-      fi
+    build "release"
+    if ! test "relase"; then
+      exit 1
+    fi
+    ;;
+  "build-test-commit")
+    build "debug"
+    if ! test "debug"; then
+      exit 1
+    fi
 
-      build "release"
-      if ! test "relase"; then
-        exit 1
-      fi
+    build "release"
+    if ! test "relase"; then
+      exit 1
+    fi
 
-      commit
-      ;;
+    commit
+    ;;
   esac
 }
 

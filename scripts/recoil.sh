@@ -32,7 +32,7 @@
 #
 # As a library:
 #
-#    See: https://github.com/00fast00/overwatch-widget/blob/7834c1de3743cce838767d5fb368e78fd340327d/scripts/build.sh#L66
+#    See: https://github.com/00fast00/overwatch-widget/blob/23a993fbac51fd96d3d39832784e12f79513ec3e/scripts/build.sh#L64
 
 ##### Config
 

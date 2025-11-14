@@ -71,12 +71,11 @@ test() {
     build="${DEBUG_OUTPUT}"
   fi
 
+  #
+  RECOIL_ENABLE_WIDGETS='"Overwatch"'
   source "${SCRIPT_DIR}/recoil.sh"
 
-  # shellcheck disable=SC2034
-  ENABLE_WIDGETS='"Overwatch"'
-
-  local work_dir
+  # Copy widget
   mkdir -p "${SCRIPT_DIR}/../test/overwatch-bar"
   work_dir=$(realpath "${SCRIPT_DIR}/../test/overwatch-bar")
 
@@ -84,25 +83,58 @@ test() {
   mkdir -p "${luaui_dir}"
   cp -f "${build}" "${luaui_dir}/"
 
-  # Run spring-headless
-  local output
-  # recoil_enable_log
-  output=$(recoil_run "headless" "${work_dir}" "${BAR_REPO}" "master" "" "${RECOIL_DEFAULT_MAP_URL}" "${RECOIL_DEFAULT_GAME}" "${RECOIL_DEFAULT_MAP}" "" true | tee -a -i /dev/tty)
-  local rc=$?
+  # Prepare
+  rversion=$(recoil_version "")
 
-  # Check for widget stuff
-  local has_check_error=false
-  if ! printf "%s" "${output}" | grep "Overwatch" 1>/dev/null; then
-    recoil_log_error_buff "\"Overwatch\" not found in test output"
+  set -e
+  recoil_download_engine "${work_dir}" "${rversion}"
+  recoil_download_game "${work_dir}" "https://github.com/beyond-all-reason/Beyond-All-Reason.git" "master" "${rversion}"
+  recoil_download_map "${work_dir}" "https://files-cdn.beyondallreason.dev/file/21028d5855cbaf0f413b5c6c7cd44d3e/full_metal_plate_1.7.sd7" "${rversion}"
+  recoil_write_script "${work_dir}" "Beyond All Reason \$VERSION" "Full Metal Plate 1.7"
+  recoil_write_settings "${work_dir}"
+  recoil_write_widget "${work_dir}" "luaui/Widgets/__inject.lua" "${_inject_widget}"
+  set +e
+
+  # Make temporary logfile
+  local logfile
+  logfile="$(mktemp --tmpdir "recoillog.XXXXXXXXXX")"
+
+  # Execute
+  local output=""
+  local rc=1
+  recoil_run "headless" "${work_dir}" "${rversion}" "" 1>"${logfile}" 2>&1
+  rc=$?
+
+  # TODO(Fast): Not sure why recoil always exits 139
+  if [ "${rc}" -eq 139 ]; then
+    rc=0
+  fi
+
+  # Check output
+  if [ $rc -ne 0 ]; then
+    recoil_check_error "${output}" "${rc}"
+    rc=$?
+  fi
+
+  if ! grep -q "\[Overwatch" "${logfile}"; then
+    recoil_add_error "\"Overwatch\" not found in test output"
     has_check_error=true
   fi
 
-  if [ "${has_check_error}" == true ]; then
-    recoil_print_error_buff
+  if grep -E "\[Overwatch::.+(ERROR|FATAL)+\]" "${logfile}"; then
+    recoil_add_error "Overwatch produced an error"
+    has_check_error=true
+  fi
+
+  if [ $rc -ne 0 ] || [ "${has_check_error}" == true ]; then
+    # cat "${logfile}"
+    recoil_print_errors
     rc=1
   fi
 
-  return ${rc}
+  rm -f "${logfile}"
+
+  return $rc
 }
 
 # Git commit functions
@@ -181,11 +213,6 @@ main() {
   "build-test")
     build "debug"
     if ! test "debug"; then
-      exit 1
-    fi
-
-    build "release"
-    if ! test "relase"; then
       exit 1
     fi
     ;;

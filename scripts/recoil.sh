@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
 # This is free and unencumbered software released into the public domain.
 #
 # Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -26,94 +24,20 @@ set -euo pipefail
 #
 # For more information, please refer to <https://unlicense.org/>
 #
+# Dependencies:
 #
-# This is highly customizable and modular. Think it's easy to understand and adopt.
+#    getopt, pcregrep, grep, git, 7z, curl, sed, realpath
 #
+#    No other external deps.
 #
-
-_version="2025-11-13"
-_help="__cmd__ is a helper to setup a test environment for mods/widgets and test them with spring/spring-headless.
-
-Usage: __cmd__ <full|headless|direct> <directory> [--recoil-version] [--repo] [--git-branch] [--game] [--map-url] [--map] [-q|--quiet] [-h|--help]
-
-Modes:
-
-    - full           : Interactive recoil with an injected widget (\"spring\")
-    - headless       : None-interactive recoil (\"spring-headless\")
-    - direct         : Interactive w/o the widget (\"spring\")
-
-Options:
-    --recoil-version : Recoil Release (default: latest github release)
-    --repo           : git repo or rapid tag (default: __RECOIL_DEFAULT_GAME_REPO__)
-    --git-branch     : The branch (default: __RECOIL_DEFAULT_GAME_BRANCH__)
-    --game           : The game/mod (default: __RECOIL_DEFAULT_GAME__)
-    --map-url        : Map download URL (default: __RECOIL_DEFAULT_MAP_URL__)
-    --map            : Map to use (default: __RECOIL_DEFAULT_MAP__)
-    -q, --quiet      : Quiet mode, print's only on error, print's the output of recoil on error as well
-    -v, --version    : Print's the version
-    -h, --help       : Print's the help
-
-Funtionality:
-
-    - downloads (if not there):
-        - recoil (latest version auto-detected if wanted)
-        - game/mod (using git first if fails it tries pr-downloader/rapid)
-        - A map
-    - customizes the game with a widget to enable any other widget and quit the game after x seconds
-        - This is disabled for pr-downloader games, it can't modify those packages atm.
-        - This is disabled for \"direct\" games, you wanna test/play not quit.
-    - writes a custom springsettings.cfg
-    - run\'s spring or spring-headless
-    - checks the output for common errors (grep + pcregrep)
-    - removes the custom widget
-    - print\'s the output on error in quiet mode and always else
-
-Examples:
-
-    # Run headless in silent mode (only output on error with complete log)
-    $ __cmd__ -q headless test/bar
-
-    # Run the game with script defaults
-    $ __cmd__ direct test/bar
-
-    # Run headless with a local git repo and latest stable recoil
-    $ __cmd__ headless test/bar-local --repo=../Beyond-All-Reason
-
-    # Run a rc version of recoil
-    $ __cmd__ headless test/bar-local --recoil-version=2025.06.09 --repo=../Beyond-All-Reason
-
-    # Run a rc version of recoil with official bar (using pr-downloader)
-    $ __cmd__ direct test/byar-test --recoil-version=2025.06.09 --repo=byar:test --game='Beyond All Reason test-28880-bf7ac6e'
-
-    # Run TechA :)
-    $ __cmd__ direct test/techa --repo https://github.com/techannihilation/TA.git --game 'Tech Annihilation \$VERSION' --map 'Techno Lands Final 26.0' --map-url http://www.hakora.xyz/files/springrts/maps/techno_lands_final_26.0.sd7
-
-Dependencies:
-
-    getopt, pcregrep, grep, git, 7z, curl, sed, realpath
-
-    No other external deps.
-
-As a library:
-
-    See: https://github.com/00fast00/overwatch-widget/blob/7834c1de3743cce838767d5fb368e78fd340327d/scripts/build.sh#L66
-
-Copyright:
-
-    - Fast - The Unlicense
-"
-
+# As a library:
 #
+#    See: https://github.com/00fast00/overwatch-widget/blob/7834c1de3743cce838767d5fb368e78fd340327d/scripts/build.sh#L66
+
 ##### Config
-#
-RECOIL_DEFAULT_GAME_REPO=${RECOIL_DEFAULT_GAME_REPO:-"https://github.com/beyond-all-reason/Beyond-All-Reason.git"}
-RECOIL_DEFAULT_GAME_BRANCH=${RECOIL_DEFAULT_GAME_BRANCH:-"master"}
-RECOIL_DEFAULT_MAP_URL=${RECOIL_DEFAULT_MAP_URL:-"https://files-cdn.beyondallreason.dev/file/21028d5855cbaf0f413b5c6c7cd44d3e/full_metal_plate_1.7.sd7"}
-RECOIL_DEFAULT_MAP=${RECOIL_DEFAULT_MAP:-"Full Metal Plate 1.7"}
-RECOIL_DEFAULT_GAME=${RECOIL_DEFAULT_GAME:-"Beyond All Reason \$VERSION"}
 
 # springsettings.cfg contents
-RECOIL_DEFAULT_SETTINGS=${RECOIL_DEFAULT_SETTINGS:-"AllowDeferredMapRendering = 1
+RECOIL_SETTINGS=${RECOIL_SETTINGS:-"AllowDeferredMapRendering = 1
 AllowDeferredModelRendering = 1
 AllowDrawMapDeferredEvents = 1
 BuildWarnings = 1
@@ -285,21 +209,18 @@ RECOIL_PRD_RAPID_USE_STREAMER=${RECOIL_PRD_RAPID_USE_STREAMER:-"false"}
 RECOIL_PRD_RAPID_REPO_MASTER=${RECOIL_PRD_RAPID_REPO_MASTER:-"https://repos-cdn.beyondallreason.dev/repos.gz"}
 
 # Spring.Quit() at x seconds
-QUIT_AT=${QUIT_AT:-5}
+RECOIL_QUIT_AT=${RECOIL_QUIT_AT:-5}
 
 # Lua { `here` } - widgets to enable via widgethandler:EnableWidget()
 # Example: ENABLE_WIDGETS='"Widget1", "Widget2"'
-ENABLE_WIDGETS=${ENABLE_WIDGETS:-''}
+RECOIL_ENABLE_WIDGETS=${RECOIL_ENABLE_WIDGETS:-''}
 
-###
-#
 #### END OF CONFIG
-#
 
 ###
 # Globals
 _log_silent=true
-_log_error_buff=""
+_errors=()
 ###
 
 ###
@@ -309,8 +230,8 @@ _inject_widget=$(
 --
 -- AUTO GENERATED: DO NOT COMMIT
 --
-local QUIT_AT = ${QUIT_AT}
-local ENABLE_WIDGETS = { ${ENABLE_WIDGETS} }
+local QUIT_AT = ${RECOIL_QUIT_AT}
+local ENABLE_WIDGETS = { ${RECOIL_ENABLE_WIDGETS} }
 
 local widget = widget ---@type Widget
 
@@ -349,11 +270,13 @@ EOF
 # Helper
 #
 
-# https://stackoverflow.com/a/17841619
-function __join {
-    local IFS="$1"
-    shift
-    echo "$*"
+__quote() {
+    old_IFS="$IFS"
+    IFS=" "
+
+    printf "\"%s\" " "$@"
+
+    IFS="${old_IFS}"
 }
 
 __log() {
@@ -369,10 +292,17 @@ __log_error() {
 }
 
 __require_cmd() {
-    command -v "$1" >/dev/null 2>&1 || {
-        __log_error "required command not found: $1"
+    local not_found=false
+
+    for req in "$@"; do
+        if ! command -v "$req" >/dev/null 2>&1; then
+            __log_error "required command not found: $req"
+        fi
+    done
+
+    if [ "${not_found}" == true ]; then
         exit 2
-    }
+    fi
 }
 
 __sed_template() {
@@ -389,7 +319,8 @@ __sed_template() {
     printf "%s" "${input}" | sed "${sedopts[@]}"
 }
 
-__incase_path() {
+# Generates a case sensetive path
+__case_path() {
     local work_dir=$1
     local input=$2
 
@@ -412,14 +343,13 @@ recoil_enable_log() {
     _log_silent=false
 }
 
-recoil_log_error_buff() {
-    _log_error_buff+=$(printf -- "ERROR: %s\n" "$*")
+recoil_add_error() {
+    _errors+=("$*")
 }
 
-recoil_print_error_buff() {
-    if [ "${#_log_error_buff}" -ge 1 ]; then
-        printf "%s\n" "${_log_error_buff}" >&2
-        _log_error_buff=""
+recoil_print_errors() {
+    if [ "${#_errors[@]}" -gt 0 ]; then
+        printf "ERROR: %s\n" "${_errors[@]}"
     fi
 }
 
@@ -452,8 +382,7 @@ recoil_version() {
 # Download engine if needed.
 #
 recoil_download_engine() {
-    __require_cmd curl
-    __require_cmd 7z
+    __require_cmd curl 7z
 
     local work_dir="$1"
     local version="$2"
@@ -465,7 +394,7 @@ recoil_download_engine() {
     fi
 
     if [ ! -x "${engine_dir}/spring" ]; then
-        pushd "${engine_dir}" 1>/dev/null
+        pushd "${engine_dir}" 1>/dev/null || return 1
 
         __log "Downloading Recoil ${version}: ${url}"
         curl --fail --show-error --silent --location "${url}" -o recoil.7z
@@ -473,7 +402,7 @@ recoil_download_engine() {
         7z x -r -y recoil.7z 1>/dev/null 2>&1
         rm -f recoil.7z
 
-        popd 1>/dev/null
+        popd 1>/dev/null || return 1
     fi
 
     __log "Using Recoil ${version}"
@@ -529,8 +458,11 @@ recoil_download_game() {
 # Download map if needed.
 #
 recoil_download_map() {
+    __require_cmd curl
+
     local work_dir="$1"
     local url="$2"
+    local recoil_version="$3"
 
     local map_dir="${work_dir}/maps"
     local map_file=""
@@ -572,31 +504,48 @@ recoil_download_map() {
 
 recoil_write_widget() {
     local work_dir="$1"
-    local widget_path="$2"
+    local widget="$2"
     local content="$3"
 
-    __log "Writing widget: ${widget_path}"
+    __log "Writing widget: $widget"
 
     # Fix "Widgets (BAR)" vs "widgets (TechA)"
-    widget_path=$(__incase_path "${work_dir}" "${widget_path}")
+    local widget_path="packages/game.sdd/$widget"
+    if ! case_path=$(__case_path "${work_dir}" "${widget_path}"); then
+        __log_error "Failed to find the directory of widget \"${widget}\": \"$(dirname "${widget_path}")\""
+        return 1
+    fi
 
     local tmp
-    tmp=$(mktemp "${widget_path}.XXXXXX")
+    tmp=$(mktemp "${case_path}.XXXXXX")
     printf '%s' "${content}" >"${tmp}"
 
-    mv -f "${tmp}" "${widget_path}"
+    if ! mv -f "${tmp}" "${case_path}"; then
+        return 1
+    fi
+
+    return 0
 }
 
 recoil_remove_widget() {
     local work_dir="$1"
-    local widget_path="$2"
+    local widget="$2"
 
-    __log "Removing widget: ${widget_path}"
+    # Fix "Widgets (BAR)" vs "widgets (TechA)"
+    local widget_path="packages/game.sdd/$widget"
+    if ! case_path=$(__case_path "${work_dir}" "${widget_path}"); then
+        __log_error "Failed to find the directory of widget \"${widget}\": \"$(dirname "${widget_path}")\""
+        return 1
+    fi
 
-    # Fix "Widgets" vs "widgets"
-    widget_path=$(__incase_path "${work_dir}" "${widget_path}")
+    if [ ! -f "${case_path}" ]; then
+        __log_error "Failed to remove widget \"${widget}\", it does not exist"
+        return 1
+    fi
 
-    rm -f "${widget_path}"
+    rm -f "${case_path}"
+
+    return 0
 }
 
 recoil_write_script() {
@@ -606,7 +555,7 @@ recoil_write_script() {
 
     local script_path="${work_dir}/_script.txt"
 
-    __log "Writing script: ${script_path}: game=${script_game} map=${script_map}"
+    __log "Writing script: ${script_path}: game=\"${script_game}\" map=\"${script_map}"\"
 
     local -A subs=(
         ["__GAME__"]="${script_game}"
@@ -630,17 +579,16 @@ recoil_write_settings() {
 
     local tmp
     tmp=$(mktemp "${work_dir}/springsettings.cfg.XXXXXX")
-    printf '%s' "${RECOIL_DEFAULT_SETTINGS}" >"${tmp}"
+    printf '%s' "${RECOIL_SETTINGS}" >"${tmp}"
 
     mv -f "${tmp}" "${work_dir}/springsettings.cfg"
 }
 
-recoil_run_engine() {
+recoil_run() {
     local mode="$1" # full|headless|direct
     local work_dir="$2"
     local version="$3"
     local args="$4"
-    local always_print="${5:-false}"
 
     local output=""
     local rc=1
@@ -658,156 +606,151 @@ recoil_run_engine() {
     IFS=" " read -r -a ea <<<"${args}"
     IFS=$old_IFS
 
-    local -a cmd
-    cmd=("${spring}" "--isolation" "--nocolor" "--write-dir" "${work_dir}")
-    cmd=("${cmd[@]}" "${ea[@]}")
-    cmd+=("${script_path}")
+    local -a rargs
+    rargs=("--isolation" "--nocolor" "--write-dir" "${work_dir}" "${ea[@]}")
+    rargs+=("${script_path}")
 
-    __log "Run $(__join " " "${cmd[@]}")" # note this ends up int $output when the caller redirects it.
+    __log "Run ${spring} $(__quote "${rargs[@]}")"
 
-    if [ "${_log_silent}" == true ] && [ "${always_print}" == false ] && [ "${mode}" != "direct" ]; then
-        output=$(nohup "${cmd[@]}" 2>&1)
-        rc=$?
-    else
-        output=$(nohup "${cmd[@]}" 2>&1 | tee -i -a /dev/tty)
-        rc=$?
-    fi
-
-    # TODO(Fast): Not sure why recoil always exits 139 in the current scenario.
-    if [ "${rc}" -eq 139 ]; then
-        rc=0
-    fi
-
-    printf "%s" "${output}"
-    return "$rc"
+    $spring "${rargs[@]}"
+    return $?
 }
 
 # Some rules from: https://github.com/techannihilation/TA/blob/c932d28c9589f0ddb4efa4694dd25a684a6dc317/.github/workflows/validate-game.yml
 recoil_check_error() {
-    __require_cmd pcregrep
-    __require_cmd grep
+    __require_cmd pcregrep grep
 
-    local output="$1"
-    local rc="$2"
+    local logfile="$1"
 
     local has_check_error=false
 
     local matches
 
-    matches=$(printf "%s" "${output}" | pcregrep -o1 '(Error in .*\(\): \[string \".*\"\]:\d+:.*)' || true)
+    matches=$(pcregrep -o1 '(Error in .*\(\): \[string \".*\"\]:\d+:.*)' "${logfile}" || true)
 
     if [ -n "${matches}" ]; then
         has_check_error=true
-        recoil_log_error_buff "${matches}"
+        recoil_add_error "${matches}"
     fi
 
-    if ! printf "%s" "${output}" | grep -q 'Player UnnamedPlayer finished loading and is now ingame'; then
+    if grep -q 'Spring: caught content_error: ' "${logfile}"; then
         has_check_error=true
-        recoil_log_error_buff "Game failed to load"
+        recoil_add_error "Game failed to load, haven't found the game"
     fi
 
-    if printf "%s" "${output}" | grep -q "Internal Lua error: Call failure"; then
+    if ! grep -q 'finished loading and is now ingame' "${logfile}"; then
         has_check_error=true
-        recoil_log_error_buff "Found a lua gadget with error in it"
+        recoil_add_error "Game failed to load, no message: \"finished loading and is now ingame\""
     fi
 
-    if printf "%s" "${output}" | grep -qE 'Error: Failed to load: [^\.]+\.lua'; then
+    if grep -q "Internal Lua error: Call failure" "${logfile}"; then
         has_check_error=true
-        recoil_log_error_buff "Found a lua gadget with error in it"
+        recoil_add_error "Found a lua gadget with error in it, found: \"Internal Lua error: Call failure\""
     fi
 
-    if [ "${rc}" -eq 0 ] && [ "${has_check_error}" == true ]; then
+    if grep -q 'Error: Failed to load:' "${logfile}"; then
+        has_check_error=true
+        recoil_add_error "Found a lua gadget with error in it, found: \"Error: Failed to load:\""
+    fi
+
+    if [ "${has_check_error}" == true ]; then
         rc=1
     fi
 
-    return "$rc"
+    return $rc
 }
 
-# recoil_run "${run_mode}" "${work_dir}" "${repo}" "${branch}" "${version}" "${map_url}" "${script_game}" "${script_map}" "${args}" true
-recoil_run() {
-    local mode="$1"
-    local work_dir="$2"
-    local repo="$3"
-    local branch="$4"
-    local version="$5"
-    local map_url="$6"
-    local script_game="$7"
-    local script_map="$8"
-    local args="${9:-""}"
-    local always_print="${10:-false}"
+#
+# direct execution
+#
+_version="2025-11-14"
+_help="__cmd__ is a helper to setup a test environment for mods/widgets and test them with spring/spring-headless.
 
-    version=$(recoil_version "${version}")
+Usage: __cmd__ <full|headless|direct> <directory> [--recoil-version] [--repo] [--git-branch] [--game] [--map-url] [--map] [-q|--quiet] [-h|--help]
 
-    recoil_download_engine "${work_dir}" "${version}"
+Modes:
 
-    set +e
-    recoil_download_game "${work_dir}" "${repo}" "${branch}" "${version}"
-    rc=$?
-    set -e
-    if [ "$rc" -ne 0 ]; then
-        return $rc
-    fi
+    - full           : Interactive recoil with an injected widget (\"spring\")
+    - headless       : None-interactive recoil (\"spring-headless\")
+    - direct         : Interactive w/o the widget (\"spring\")
 
-    set +e
-    recoil_download_map "${work_dir}" "${map_url}"
-    rc=$?
-    set -e
-    if [ "$rc" -ne 0 ]; then
-        return $rc
-    fi
+Options:
+    --recoil-version : Recoil Release (default: latest github release)
+    --repo           : git repo or rapid tag (default: __DEFAULT_GAME_REPO__)
+    --git-branch     : The branch (default: __DEFAULT_GAME_BRANCH__)
+    --game           : The game/mod (default: __DEFAULT_GAME__)
+    --map-url        : Map download URL (default: __DEFAULT_MAP_URL__)
+    --map            : Map to use (default: __DEFAULT_MAP__)
+    -n, --no-inject  : Do not inject a widget
+    -q, --quiet      : Quiet mode, print's only on error, print's the output of recoil on error as well
+    -v, --version    : Print's the version
+    -h, --help       : Print's the help
 
-    recoil_write_script "${work_dir}" "${script_game}" "${script_map}"
-    recoil_write_settings "${work_dir}"
+Funtionality:
 
-    if [ "${mode}" != "direct" ] && [ -d "${work_dir}/packages/game.sdd" ]; then
-        # shellcheck disable=SC2329
-        __recoil_cleanup() {
-            recoil_remove_widget "$1" "packages/game.sdd/luaui/Widgets/__test.lua"
-            recoil_print_error_buff
-        }
-        # shellcheck disable=SC2064
-        trap "__recoil_cleanup \"${work_dir}\"" EXIT
+    - downloads (if not there):
+        - recoil (latest version auto-detected if wanted)
+        - game/mod (using git first if fails it tries pr-downloader/rapid)
+        - A map
+    - customizes the game with a widget to enable any other widget and quit the game after x seconds
+        - This is disabled for pr-downloader games, it can't modify those packages atm.
+        - This is disabled for \"direct\" games, you wanna test/play not quit.
+        - Also disabled with \"--no-inject\"
+    - writes a custom springsettings.cfg
+    - run\'s spring or spring-headless
+    - checks the output for common errors (grep + pcregrep)
+    - removes the custom widget
+    - print\'s the output on error in quiet mode and always else
 
-        recoil_write_widget "${work_dir}" "packages/game.sdd/luaui/Widgets/__test.lua" "${_inject_widget}"
-    else
-        trap "recoil_print_error_buff" EXIT
-    fi
+Examples:
 
-    # set -x
+    # Run headless in silent mode (only output on error with complete log)
+    $ __cmd__ -q headless test/bar
 
-    local output=""
-    local rc=1
+    # Run the game with script defaults
+    $ __cmd__ run test/bar
 
-    set +e
-    output=$(recoil_run_engine "${mode}" "${work_dir}" "${version}" "${args}" "${always_print}")
-    rc=$?
-    set -e
+    # Run headless with a local git repo and latest stable recoil
+    $ __cmd__ headless test/bar-local --repo=../Beyond-All-Reason
 
-    if [ "$rc" -eq 0 ]; then
-        recoil_check_error "${output}" "${rc}"
-        rc=$?
-    fi
+    # Run a rc version of recoil
+    $ __cmd__ headless test/bar-local --recoil-version=2025.06.09 --repo=../Beyond-All-Reason
 
-    if [ "${_log_silent}" == false ] && [ "${rc}" -ne 0 ]; then
-        printf '%s\n' "${output}"
-    fi
+    # Run a rc version of recoil with official bar (using pr-downloader)
+    $ __cmd__ run test/byar-test --recoil-version=2025.06.09 --repo=byar:test --game='Beyond All Reason test-28880-bf7ac6e'
 
-    return "$rc"
+    # Run TechA
+    $ __cmd__ run test/techa --repo https://github.com/techannihilation/TA.git --game 'Tech Annihilation \$VERSION' --map 'Techno Lands Final 26.0' --map-url http://www.hakora.xyz/files/springrts/maps/techno_lands_final_26.0.sd7
+
+    # Run Zero-K
+    $ __cmd__ run test/zerok --repo https://github.com/ZeroK-RTS/Zero-K.git --game 'Zero-K \$VERSION'
+
+    # Run TAPrime
+    $ __cmd__ run test/taprime --repo https://github.com/FluidPlay/TAPrime.git --game 'Total Annihilation Prime \$VERSION'
+
+    # Run Metal Factions
+    $ __cmd__ run test/mf --repo https://github.com/springraaar/metal_factions.git --game 'Metal Factions v2.54'
+"
+
+_cleanup() {
+    local lf="$1"
+    rm -f "${lf}"
+}
+
+# shellcheck disable=SC2329
+_cleanup_widget() {
+    local wd="$1"
+    local lf="$2"
+    recoil_remove_widget "$wd" "luaui/Widgets/__inject.lua"
+    rm -f "${lf}"
 }
 
 __main() {
-    __require_cmd getopt
-    __require_cmd pcregrep
-    __require_cmd grep
-    __require_cmd git
-    __require_cmd 7z
-    __require_cmd curl
-    __require_cmd sed
-    __require_cmd realpath
+    __require_cmd getopt pcregrep grep git 7z curl sed realpath
 
     # https://labex.io/tutorials/shell-bash-getopt-391993
     local OPTS
-    if ! OPTS=$(getopt -o hvq --long help,version,quiet,recoil-version:,repo:,git-branch:,game:,map-url:,map: -- "$@"); then
+    if ! OPTS=$(getopt -o nhvq --long help,version,quiet,no-inject,recoil-version:,repo:,git-branch:,game:,map-url:,map: -- "$@"); then
         __log_error "While parsing options"
         exit 1
     fi
@@ -815,15 +758,17 @@ __main() {
     ## Reset the positional parameters to the parsed options
     eval set -- "$OPTS"
 
+    # Defaults
     local help=false
     local version=false
     local quiet=false
-    local recoil_version=""
-    local repo="${RECOIL_DEFAULT_GAME_REPO}"
-    local branch="${RECOIL_DEFAULT_GAME_BRANCH}"
-    local script_game="${RECOIL_DEFAULT_GAME}"
-    local script_map="${RECOIL_DEFAULT_MAP}"
-    local map_url="${RECOIL_DEFAULT_MAP_URL}"
+    local no_inject=false
+    local rversion=""
+    local repo="https://github.com/beyond-all-reason/Beyond-All-Reason.git"
+    local branch="master"
+    local script_game="Beyond All Reason \$VERSION"
+    local script_map="Full Metal Plate 1.7"
+    local map_url="https://files-cdn.beyondallreason.dev/file/21028d5855cbaf0f413b5c6c7cd44d3e/full_metal_plate_1.7.sd7"
 
     ## Process the options
     while true; do
@@ -840,9 +785,12 @@ __main() {
             quiet=true
             shift
             ;;
-
+        -n | --no-inject)
+            no_inject=true
+            shift
+            ;;
         --recoil-version)
-            recoil_version="$2"
+            rversion="$2"
             shift 2
             ;;
         --repo)
@@ -881,7 +829,7 @@ __main() {
         exit 0
     fi
 
-    local known_modes="full:headless:direct"
+    local known_modes="full:headless:run"
     local mode
     local work_dir
 
@@ -898,15 +846,17 @@ __main() {
         fi
     fi
 
+    local args="$*"
+
     if [ "${help}" == true ]; then
         # shellcheck disable=SC2034
         local -A subs=(
             ["__cmd__"]="${0}"
-            ["__RECOIL_DEFAULT_GAME_REPO__"]="${RECOIL_DEFAULT_GAME_REPO}"
-            ["__RECOIL_DEFAULT_GAME_BRANCH__"]="${RECOIL_DEFAULT_GAME_BRANCH}"
-            ["__RECOIL_DEFAULT_GAME__"]="${RECOIL_DEFAULT_GAME}"
-            ["__RECOIL_DEFAULT_MAP_URL__"]="${RECOIL_DEFAULT_MAP_URL}"
-            ["__RECOIL_DEFAULT_MAP__"]="${RECOIL_DEFAULT_MAP}"
+            ["__DEFAULT_GAME_REPO__"]="${repo}"
+            ["__DEFAULT_GAME_BRANCH__"]="${branch}"
+            ["__DEFAULT_GAME__"]="${script_game}"
+            ["__DEFAULT_MAP_URL__"]="${map_url}"
+            ["__DEFAULT_MAP__"]="${script_map}"
         )
 
         local content=""
@@ -916,21 +866,78 @@ __main() {
         exit 0
     fi
 
+    if [ "${mode}" == "run" ]; then
+        quiet=false
+        no_inject=true
+    fi
+
     mkdir -p "${work_dir}"
     work_dir=$(realpath "${work_dir}")
 
-    if [[ "${quiet}" != true ]] || [ "$mode" == "direct" ]; then
+    if [[ "${quiet}" == false ]]; then
         recoil_enable_log
     fi
 
-    local rc=1
-    recoil_run "${mode}" "${work_dir}" "${repo}" "${branch}" "${recoil_version}" "${map_url}" "${script_game}" "${script_map}" "${@}"
-    rc=$?
+    # Prepare
+    rversion=$(recoil_version "${rversion}")
 
-    return ${rc}
+    set -e
+    recoil_download_engine "${work_dir}" "${rversion}"
+    recoil_download_game "${work_dir}" "${repo}" "${branch}" "${rversion}"
+    recoil_download_map "${work_dir}" "${map_url}" "${rversion}"
+    recoil_write_script "${work_dir}" "${script_game}" "${script_map}"
+    recoil_write_settings "${work_dir}"
+
+    # Make temporary logfile
+    local logfile
+    logfile="$(mktemp --tmpdir "recoillog.XXXXXXXXXX")"
+
+    if [ "${no_inject}" != true ] && [ -d "${work_dir}/packages/game.sdd" ]; then
+        # shellcheck disable=SC2064
+        trap "_cleanup_widget \"${work_dir}\" \"${logfile}\"" EXIT
+
+        recoil_write_widget "${work_dir}" "luaui/Widgets/__inject.lua" "${_inject_widget}"
+    else
+        # shellcheck disable=SC2064
+        trap "_cleanup \"${logfile}\"" EXIT
+    fi
+    set +e
+
+    # Execute
+    __log "Running the game"
+    if [ "${mode}" == "run" ]; then
+        local output=""
+        local rc=1
+        recoil_run "${mode}" "${work_dir}" "${rversion}" "${args}" 2>&1 | tee -p "${logfile}"
+        rc=$?
+    else
+        local output=""
+        local rc=1
+        recoil_run "${mode}" "${work_dir}" "${rversion}" "${args}" 1>"${logfile}" 2>&1
+        rc=$?
+    fi
+
+    # TODO(Fast): Not sure why recoil always exits 139
+    if [ $rc -eq 139 ]; then
+        rc=0
+    fi
+
+    # Check output
+    if [ $rc -ne 0 ]; then
+        recoil_check_error "${logfile}"
+        rc=$?
+    fi
+
+    if [ $rc -ne 0 ] || [ "${quiet}" == false ]; then
+        cat "${logfile}"
+        recoil_print_errors
+    fi
+
+    return $rc
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [ "${0}" == "${BASH_SOURCE[0]}" ]; then
+    set -uo pipefail
     __main "$@"
     exit $?
 fi

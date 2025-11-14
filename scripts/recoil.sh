@@ -23,7 +23,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 # For more information, please refer to <https://unlicense.org/>
-#
+
 # Dependencies:
 #
 #    getopt, pcregrep, grep, git, 7z, curl, sed, realpath
@@ -271,7 +271,7 @@ EOF
 #
 
 __quote() {
-    old_IFS="$IFS"
+    local old_IFS="$IFS"
     IFS=" "
 
     printf "\"%s\" " "$@"
@@ -297,6 +297,7 @@ __require_cmd() {
     for req in "$@"; do
         if ! command -v "$req" >/dev/null 2>&1; then
             __log_error "required command not found: $req"
+            not_found=true
         fi
     done
 
@@ -313,7 +314,8 @@ __sed_template() {
 
     local -a sedopts=()
     for k in "${!subs_ref[@]}"; do
-        sedopts+=("-e" "s#${k}#${subs_ref[$k]}#g")
+        local val="${subs_ref[$k]//|/\\|}"
+        sedopts+=("-e" "s|${k}|${val}|g")
     done
 
     printf "%s" "${input}" | sed "${sedopts[@]}"
@@ -511,6 +513,7 @@ recoil_write_widget() {
 
     # Fix "Widgets (BAR)" vs "widgets (TechA)"
     local widget_path="packages/game.sdd/$widget"
+    local case_path
     if ! case_path=$(__case_path "${work_dir}" "${widget_path}"); then
         __log_error "Failed to find the directory of widget \"${widget}\": \"$(dirname "${widget_path}")\""
         return 1
@@ -520,9 +523,7 @@ recoil_write_widget() {
     tmp=$(mktemp "${case_path}.XXXXXX")
     printf '%s' "${content}" >"${tmp}"
 
-    if ! mv -f "${tmp}" "${case_path}"; then
-        return 1
-    fi
+    mv -f "${tmp}" "${case_path}" || return 1
 
     return 0
 }
@@ -533,17 +534,18 @@ recoil_remove_widget() {
 
     # Fix "Widgets (BAR)" vs "widgets (TechA)"
     local widget_path="packages/game.sdd/$widget"
+    local case_path
     if ! case_path=$(__case_path "${work_dir}" "${widget_path}"); then
         __log_error "Failed to find the directory of widget \"${widget}\": \"$(dirname "${widget_path}")\""
-        return 1
+        return 0
     fi
 
     if [ ! -f "${case_path}" ]; then
         __log_error "Failed to remove widget \"${widget}\", it does not exist"
-        return 1
+        return 0
     fi
 
-    rm -f "${case_path}"
+    rm -f "${case_path}" || return 0
 
     return 0
 }
@@ -555,7 +557,7 @@ recoil_write_script() {
 
     local script_path="${work_dir}/_script.txt"
 
-    __log "Writing script: ${script_path}: game=\"${script_game}\" map=\"${script_map}"\"
+    __log "Writing script: ${script_path}: game=\"${script_game}\" map=\"${script_map}\""
 
     local -A subs=(
         ["__GAME__"]="${script_game}"
@@ -612,7 +614,9 @@ recoil_run() {
 
     __log "Run ${spring} $(__quote "${rargs[@]}")"
 
-    $spring "${rargs[@]}"
+    local cmd=("$spring" "${rargs[@]}")
+    "${cmd[@]}"
+
     return $?
 }
 
@@ -635,7 +639,7 @@ recoil_check_error() {
 
     if grep -q 'Spring: caught content_error: ' "${logfile}"; then
         has_check_error=true
-        recoil_add_error "Game failed to load, haven't found the game"
+        recoil_add_error "Game failed to load, haven't found the game or other error"
     fi
 
     if ! grep -q 'finished loading and is now ingame' "${logfile}"; then
@@ -653,6 +657,7 @@ recoil_check_error() {
         recoil_add_error "Found a lua gadget with error in it, found: \"Error: Failed to load:\""
     fi
 
+    local rc=0
     if [ "${has_check_error}" == true ]; then
         rc=1
     fi
@@ -737,7 +742,6 @@ _cleanup() {
     rm -f "${lf}"
 }
 
-# shellcheck disable=SC2329
 _cleanup_widget() {
     local wd="$1"
     local lf="$2"
